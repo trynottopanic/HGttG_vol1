@@ -49,6 +49,10 @@ baseline and intends to begin hardware work on the Linux 6.18.y long-term
 kernel line. Exact release inputs will be pinned and hashed before an image is
 distributed.
 
+The current workshop setup and its command dictionary are documented in
+[`GuideOS/BUILDING.md`](GuideOS/BUILDING.md). Exact approved input revisions are
+recorded in [`GuideOS/SOURCES.lock`](GuideOS/SOURCES.lock).
+
 ## Accessibility of development
 
 Buildroot and hardware enablement are necessarily technical, but they should

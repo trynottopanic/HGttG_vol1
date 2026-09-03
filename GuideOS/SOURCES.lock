@@ -1,0 +1,11 @@
+# Exact inputs approved for GuideOS builds.
+# A source is not part of a release unless an immutable revision is recorded.
+
+[buildroot]
+version = 2025.02.17
+repository = https://gitlab.com/buildroot.org/buildroot.git
+commit = d0820dd09916edcefc44e525355afbea30d5bee4
+
+[linux]
+series = 6.18.y
+status = exact-release-pending-rg35xxh-bringup
