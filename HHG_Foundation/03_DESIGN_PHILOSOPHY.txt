@@ -1,0 +1,137 @@
+HHGttG DESIGN PHILOSOPHY
+========================
+
+Status: Foundational summary, version 0.2
+
+THE PERSON IS THE PLATFORM
+
+A person's identity, information, relationships, preferences, and agent should
+outlast any particular screen, processor, employer, application, or hosting
+provider. Technology attaches to the person through their Deck, not the person
+to a vendor's platform.
+
+SERVE INTENTION, NOT ENGAGEMENT
+
+The Guide exists to help a person understand something, communicate, create,
+organize, decide, or act. It should not optimize for advertising exposure,
+compulsive use, time-on-screen, or dependence on the system.
+
+INCREASE HUMAN AGENCY
+
+Agentic assistance should translate human intentions into understandable plans
+and actions. It must not quietly replace the person's judgment or acquire the
+person's authority. Observation, interpretation, preparation, action, and
+delegation require progressively stronger permission.
+
+PROTOCOLS BEFORE PLATFORMS
+
+People using different Decks, Nodes, interfaces, and implementations should
+still communicate and exchange information. No central service should own the
+social graph, identity system, application channel, or network itself.
+
+SIMPLE ON THE SURFACE, INSPECTABLE UNDERNEATH
+
+Ordinary use should require little technical knowledge. A person who wants to
+understand more should be able to inspect sources, actions, permissions,
+provenance, network behavior, and technical details. Simplicity must not depend
+on secrecy.
+
+CREATION IS ORDINARY USE
+
+Making a small Guide program should be a normal creative activity, not a
+specialist privilege. A person who uses computers regularly should be able to
+connect an input to an action, test it safely, understand what went wrong, and
+share the result with a friend without first studying conventional software
+engineering.
+
+Guide development tools, Recipes, terminology, messages, and documentation
+must begin in plain language. Necessary technical terms must be introduced
+where they become useful, defined immediately, and connected to a concrete
+example. This requirement does not permit technical facts, risks, or limits to
+be hidden. The design must offer a short path for common work and a visible
+path down to exact implementation details.
+
+MODULARITY WITHOUT BURDEN
+
+People should be able to choose displays, controls, sensors, radios, storage,
+and compute appropriate to their bodies, resources, and purposes. A standard
+preassembled configuration should remain easy for someone who does not want to
+manage modules.
+
+LATERAL THINKING WITH WITHERED TECHNOLOGY
+
+HHG adopts Gunpei Yokoi's principle of "Lateral Thinking with Withered
+Technology": use mature, inexpensive, abundant, and well-understood technology
+in new combinations instead of making novelty or maximum performance an end in
+itself.
+
+The Guide's innovation should come primarily from the relationships it creates
+among familiar components. Commodity processors, cheap displays, established
+radios, standard connectors, discarded tablets, and ordinary storage can
+become a new personal and community computing environment when joined by an
+open capability protocol.
+
+"Withered" means seasoned and dependable, not insecure or unsupported.
+Obsolete components may be safely repurposed only within capabilities their
+condition can support. Security primitives, exposed network software, and
+safety-critical controls must remain maintained and replaceable. Cutting-edge
+technology is appropriate when it solves a demonstrated human need, but it
+should enter as an optional capability rather than make the entire network
+dependent upon scarcity, expense, or one vendor.
+
+LOCAL FIRST; NETWORK CAPABLE
+
+The Deck should retain useful knowledge and essential functions when isolated.
+Connectivity expands its reach but does not grant a remote service ownership of
+the person. Intermittent links and physically carried information are normal
+operating conditions.
+
+HONESTNESS BEFORE SPEED
+
+Fast responses are desirable, but speed must not take precedence over informing
+the user of the results and implications of what their question posits. The
+Guide should communicate progress, evidence, limits, and uncertainty plainly.
+
+AUTONOMY IS RECIPROCAL
+
+The Guide protects its owner while respecting the equal autonomy of others. A
+Deck must resist unauthorized access and must not use its hardware, software,
+agents, or network capacity to unreasonably harm, deceive, surveil, overwhelm,
+or disrupt other people and systems.
+
+ACCESSIBILITY IS ARCHITECTURAL
+
+Text, speech, touch, physical controls, assistive devices, and agent interaction
+should operate on the same underlying information and capabilities. No single
+interface is assumed to suit every person.
+
+KNOWLEDGE SHOULD REMAIN EXAMINABLE
+
+The Guide should help people reach humanity's accumulated knowledge while
+preserving sources, provenance, competing interpretations, and uncertainty. An
+agent should help the person understand information rather than become an
+unquestionable authority standing between the person and it.
+
+DESIGN FOR DECADES, FAILURE, AND EXIT
+
+Hardware breaks, companies fail, communities change, and formats age. Identity
+must be recoverable; data must be exportable; old formats must be convertible;
+and providers must be replaceable. A person must be able to leave a vendor,
+employer, or Node without leaving behind their digital self.
+
+OPENNESS MUST RESIST CAPTURE
+
+Corporations may build hardware, operate Nodes, sell services, and contribute
+software, but money cannot purchase architectural privilege. Open specifications,
+public tests, reciprocal licensing, transparent governance, portable data, and
+independent implementations must keep HHG centered on individuals and
+communities.
+
+GUIDING QUESTION
+
+Every major decision should be tested by asking:
+
+    Does this help a person understand and direct their digital life while
+    preserving the same freedom and safety for everyone else?
+
+If the answer is no, the design does not belong in the Guide.

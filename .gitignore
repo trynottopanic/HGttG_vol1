@@ -1,0 +1,22 @@
+# Buildroot downloads and generated build trees
+/build/
+/dl/
+/output/
+
+# Generated system images
+*.img
+*.img.gz
+*.iso
+*.sdcard
+*.wic
+
+# Local Buildroot state
+.config
+.config.old
+.br2-external.mk
+
+# Editor and operating-system metadata
+.DS_Store
+Thumbs.db
+*.swp
+*~

@@ -1,0 +1,8 @@
+NAME="GuideOS"
+PRETTY_NAME="GuideOS 0.0.1 development"
+ID=guideos
+VERSION_ID="0.0.1-dev"
+VERSION="0.0.1 development"
+HOME_URL="https://github.com/trynottopanic/HGttG_vol1"
+SUPPORT_URL="https://github.com/trynottopanic/HGttG_vol1/issues"
+BUG_REPORT_URL="https://github.com/trynottopanic/HGttG_vol1/issues"

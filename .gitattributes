@@ -1,0 +1,11 @@
+* text=auto
+
+# Build and Linux system files must retain Unix line endings.
+*.in text eol=lf
+*.mk text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+GuideOS/board/common/rootfs-overlay/etc/* text eol=lf
+
+# Generated design concepts are binary.
+*.png binary

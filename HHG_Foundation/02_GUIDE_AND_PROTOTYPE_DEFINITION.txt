@@ -1,0 +1,270 @@
+HHGttG: THE GUIDE AND FIRST PROTOTYPE
+====================================
+
+Status: Working system definition, version 0.1
+
+1. THEORETICAL DEFINITION
+-------------------------
+
+HHGttG, displayed as HHG and commonly called the Guide, is an open,
+local-first protocol and personal-computing architecture through which
+person-owned Decks communicate with modular Interfacing Devices and federated
+Nodes.
+
+The Guide exists to give an individual practical access to knowledge, other
+people, services, tools, and the digitally represented world without making a
+central platform the owner of the person's identity or information.
+
+The Guide is not primarily:
+
+* A smartphone.
+* A single physical product.
+* An artificial-intelligence chatbot.
+* A social-media company.
+* A cloud service.
+* A blockchain.
+* An application store.
+
+It is a durable relationship among a person, their information, their chosen
+computational agent, replaceable hardware, and an interoperable network.
+
+The persistent platform is the person. Processors, displays, applications,
+models, services, employers, and hosting providers are resources that the
+person may attach, authorize, replace, or leave.
+
+2. CONSTITUTIONAL PRINCIPLE
+---------------------------
+
+Every person should be able to enter the digital noosphere through an
+interface that serves them, protects their autonomy, helps them understand
+what they encounter, and respects the equal autonomy of everyone else.
+
+Consequences of this principle include:
+
+* Identity originates under the person's cryptographic control.
+* Personal information remains portable and available in documented formats.
+* The agent's authority never exceeds machine-enforced permissions.
+* Essential functions remain useful without continuous internet access.
+* Advertising and sponsorship cannot secretly determine answers or priorities.
+* No mandatory company, Node, blockchain, or identity provider controls entry.
+* Hardware and software must not be configured to unreasonably harm or disrupt
+  other people or systems.
+* A person can change vendors, employers, hosts, interfaces, and hardware
+  without abandoning their digital self.
+
+3. THE TWO PRIMARY OBJECTS
+--------------------------
+
+THE DECK
+
+A Deck is a person's trusted computing core. It contains or controls:
+
+* Cryptographic identities and credentials.
+* Private information and structured personal records.
+* Applications and sandboxed packages.
+* Personal agents and their authorized tools.
+* Permissions and user modes.
+* Device discovery and coordination.
+* Communication with other Decks and Nodes.
+* Local knowledge, search, task history, and audit records.
+
+The Deck is the authority. Connecting a peripheral, cartridge, application, or
+Node never grants it unrestricted control.
+
+THE INTERFACING DEVICE
+
+An Interfacing Device is any modular physical object that adds one or more
+capabilities to a Deck:
+
+* Input or output.
+* Storage or packaged information.
+* General or specialized computation.
+* Sensors or physical actuation.
+* Local or long-range communication.
+
+Examples include a keyboard/display, earbud, camera, radio, drawing tablet,
+MIDI controller, VR headset, storage cartridge, compute accelerator, and a game
+controller containing the complete game.
+
+Every capable Interfacing Device should declare what it provides, requests,
+consumes, stores, and executes. The Deck negotiates capabilities and enforces
+the resulting limits.
+
+4. NODES AND THE PEOPLE'S NETWORK
+---------------------------------
+
+A Node is a locally operated shared network host. A household, company,
+library, school, cooperative, municipality, or community may operate one.
+
+A Node may provide:
+
+* Shared files and project spaces.
+* Messages, groups, and community directories.
+* Replicated public knowledge.
+* Backups and synchronization.
+* Rendering, inference, search, or other pooled computation.
+* Gateways between live networks and delayed physical delivery.
+
+Nodes federate through public protocols. Commercial Nodes are permitted but
+receive no architectural privilege. A large Node may consist of many machines
+while presenting one governed service identity.
+
+5. SOFTWARE ARCHITECTURE
+------------------------
+
+The reference implementation should initially use Linux and commodity
+hardware. A custom operating-system kernel is not required to prove the idea.
+
+The initial architecture consists of:
+
+* A capability and permission broker.
+* A device broker.
+* Sandboxed portable application components.
+* Native services only where drivers or real-time behavior require them.
+* A shared Semiotic Engine broker rather than an unrestricted language model
+  inside each package.
+* A structured local database.
+* Content-addressed storage for large or immutable objects.
+* An append-only journal for changes, provenance, and synchronization.
+* An event-driven task system with bounded resource declarations.
+* Live networking plus store-and-forward delivery for interrupted connections.
+
+Work is scheduled in four broad classes:
+
+1. Real-time: audio, tracking, instruments, and immediate controls.
+2. Interactive: typing, ordinary searches, messages, and interface actions.
+3. Analytical: image interpretation, complex reasoning, and large searches.
+4. Background: indexing, synchronization, backup, and maintenance.
+
+Complex prototype tasks may take as long as five minutes. Speed must not take
+precedence over informing the user of the results and implications of what
+their question actually posits. The Deck should show progress, limitations,
+and uncertainty rather than silently substituting a materially weaker task.
+
+6. IDENTITY AND TRUST
+---------------------
+
+Identity is cryptographic, user-controlled, plural, recoverable, and usable
+offline. A person may maintain separate personal, work, community, public,
+pseudonymous, and temporary identities.
+
+Blockchains and public registries are optional verification or transparency
+layers. They are not the source or owner of identity.
+
+The architecture must support key rotation, lost-device revocation, trusted
+introductions, multiple devices, encrypted recovery material, and recovery
+assistance from people or institutions selected by the owner.
+
+7. DATA AND APPLICATION PORTABILITY
+-----------------------------------
+
+HHG packages may carry applications, knowledge, media, permissions, and
+experiences independently of a particular vendor platform.
+
+Examples include:
+
+* A note written at home and delivered to a friend's Deck through a live or
+  delayed message route.
+* A portable music workstation connected to a MIDI keyboard and display.
+* A spatial cartridge containing a VR room and its assets.
+* A controller that contains a complete game and optionally the player's saves.
+* An encrypted animation workspace taken between a company Node and home.
+* A knowledge cartridge used by a simple voice-and-earbud cooking interface.
+
+Possessing a cartridge does not automatically grant unrestricted authority.
+Code remains sandboxed, permissions persist with protected information, and
+personal changes can be stored as separate user-owned layers.
+
+8. FIRST PHYSICAL PROTOTYPE
+---------------------------
+
+The selected first Deck is an Anbernic RG35XX H handheld containing:
+
+* A 1.5 GHz quad-core 64-bit Arm Cortex-A53 processor.
+* 1 GB of memory.
+* Two removable microSD slots.
+* A 3.5-inch 640 by 480 display.
+* Integrated directional, action, shoulder, and analog controls.
+* 2.4 and 5 GHz Wi-Fi and Bluetooth 4.2.
+* A rechargeable battery and portable enclosure.
+* A Linux-based operating environment.
+
+This replaces the Raspberry Pi Zero 2 W as the first active prototype target.
+The Pi remains a useful deferred hardware-adaptation experiment.
+
+The RG35XX H integrates storage, controls, display, battery, and networking in
+one inexpensive object. That lets the first work concentrate on Guide behavior
+and interoperability rather than assembling a display, keyboard, power system,
+and enclosure.
+
+The hardware is still below the intended capacity for a useful general-purpose
+local Semiotic Engine. It should run the Deck runtime and delegate optional
+Semiotic Engine work to an authorized Node without surrendering identity,
+permission, or execution authority.
+
+9. FIRST USER INTERFACE
+-----------------------
+
+The interface is keyboard-first and usable without a mouse. Its initial home
+view should expose a small number of stable functions:
+
+    GUIDE
+
+    [1] Ask
+    [2] Notes
+    [3] Messages
+    [4] Files
+    [5] Devices
+    [6] Tasks
+
+    Node status: Offline
+    Active tasks: None
+
+A dedicated Guide command should allow the person to express an intention from
+anywhere. Conventional menus remain available so the agent is never the only
+way to operate the Deck.
+
+The interface should progressively disclose detail: a plain explanation first,
+then sources, permissions, logs, technical information, and developer controls
+when requested.
+
+10. PROTOTYPE SOFTWARE SCOPE
+----------------------------
+
+The prototype should prove the architecture rather than imitate every feature
+of a modern phone. Its minimum software functions are:
+
+* Create and unlock a local user identity.
+* Create, edit, organize, and search notes.
+* Import and search a limited document collection.
+* Ask a local agent questions grounded in authorized local information.
+* Display sources, uncertainty, task status, and relevant actions.
+* Normalize the handheld's integrated controls and display, and represent a
+  discovered external receiver through its advertised capabilities.
+* Enforce explicit capabilities between the agent, data, and devices.
+* Remain useful with its internet connection disabled.
+* Preserve data safely across shutdown and unexpected interface removal.
+
+The next networking milestone is secure communication between two independently
+administered systems without requiring an account from a central provider.
+
+11. FIRST PROTOTYPE ACCEPTANCE TEST
+-----------------------------------
+
+The first acceptance test is local media handoff in an unfamiliar home:
+
+1. Store a user-owned movie on the Deck's removable memory.
+2. Join the same Wi-Fi network as an unknown-model smart television.
+3. Discover which standard local playback capabilities the television offers.
+4. Offer only the selected movie through a temporary, bounded media share.
+5. Ask the user to select and confirm the destination television.
+6. Cause the television to retrieve and play the movie without uploading it to
+   an internet service.
+7. Show whether discovery, authorization, transfer, decoding, and playback have
+   succeeded or failed without claiming capabilities the television lacks.
+8. Withdraw the temporary share when playback ends, the Deck leaves, or the
+   user revokes it.
+
+This test demonstrates the Guide's central claim at a small but visible scale:
+the person carries data and intent, while unfamiliar local technology supplies
+a capability through an interoperable interface.
