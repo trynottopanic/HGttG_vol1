@@ -1,0 +1,50 @@
+THIRD WAY VISITING-SCREEN-1 0.1.0 BUILD MANIFEST
+=================================================
+
+Built: 2026-09-04 America/New_York
+Target: 64-bit Windows 10 or later
+Builder: Python 3.13.7 and PyInstaller 6.16.0
+Signature: Unsigned experimental builds
+
+ThirdWayNode.exe
+Size: 9316063 bytes
+SHA-256: 57AA01A2117EC0CD7426F80D85CCCA5AC6B75131E5AEAF2EF4812DAE30BF3633
+
+ThirdWayDeck.exe
+Size: 9325492 bytes
+SHA-256: 44177EEC1792F901D3726CC614ACE69EECB31950565B9B1F6E03C0B90D6F2EB1
+
+ThirdWayNode-Setup-0.1.0.exe
+Size: 11522360 bytes
+SHA-256: 8CE2C16AE116771C9E59642FEA146737238F345D60EAEB4193266882FC5B1B01
+
+The three Windows files above are unsigned experimental builds. The installer
+uses a per-user location, creates no service or automatic startup entry, and
+includes an ordinary uninstaller.
+
+Automated tests: 9 passed
+
+Verified behaviors:
+
+* Both standalone executables start and communicate on the local network.
+* The Deck retains the selected file and registers a temporary stream offer.
+* The host displays the Deck offer without receiving a full movie copy.
+* Pairing codes expire and rotate after one accepted offer or upload.
+* Mock TV receives SetAVTransportURI followed by Play.
+* Whole-file and byte-range media responses support playback and seeking.
+* Owner revocation immediately disables the Deck stream.
+* Deck streams automatically expire after six hours.
+* The optional host-upload fallback deletes its temporary copy on revocation.
+
+Included instructions:
+
+* OWNER-INSTRUCTIONS.txt for the person controlling the visited network.
+* DECK-INSTRUCTIONS.txt for the visitor offering the movie.
+* FIELD-TEST-CHECKLIST.txt for recording the controlled test.
+
+Not yet verified:
+
+* Physical smart-TV discovery and playback.
+* Windows versions other than the build computer's Windows 10 environment.
+* Networks with client isolation, VLAN boundaries, or disabled multicast.
+* Video decoding compatibility on the destination TV.

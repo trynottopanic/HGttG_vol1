@@ -1,0 +1,34 @@
+From: GuideOS Project <guideos@localhost>
+Date: Fri, 4 Sep 2026 00:00:00 -0400
+Subject: [PATCH] arm64: dts: allwinner: h700: add USB0 VBUS regulator
+
+The reused H700 OTG patch refers to this board-level fixed regulator. Add it
+after the imported patch series so the definition is independent of older
+device-tree layout assumptions.
+
+---
+ .../dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts b/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
+--- a/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
+@@ -199,6 +199,16 @@
+ 		regulator-max-microvolt = <5000000>;
+ 	};
+ 
++	reg_usb0_vbus: regulator-usb0-vbus {
++		compatible = "regulator-fixed";
++		enable-active-high;
++		gpio = <&pio 8 16 GPIO_ACTIVE_HIGH>; /* PI16 */
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		regulator-name = "usb0-vbus";
++		vin-supply = <&reg_boost>;
++	};
++
+ 	reg_lcd: regulator-gpio-lcd-vdd {
+ 		compatible = "regulator-fixed";
+ 		regulator-min-microvolt = <3300000>;
+-- 
+2.43.0

@@ -1,7 +1,7 @@
 # Preparing a GuideOS build workspace
 
 GuideOS is assembled on Linux with Buildroot. On Windows, the current reference
-workshop is Ubuntu 24.04 under WSL2. WSL2 lets Linux build tools run alongside
+workshop is Ubuntu under WSL2. WSL2 lets Linux build tools run alongside
 Windows; it is not installed on the Deck.
 
 The first `BRINGUP-0` image definitions are present. They are intended for
@@ -9,7 +9,7 @@ controlled hardware testing and are not a finished GuideOS release.
 
 ## Install the workshop tools
 
-In an Ubuntu 24.04 terminal:
+In an Ubuntu terminal:
 
 ```sh
 sudo apt update

@@ -1,0 +1,35 @@
+THIRD WAY CONTINUE-ON-DECK-0 DEVELOPMENT MANIFEST
+=================================================
+
+Built: 2026-09-04 America/New_York
+Target: 64-bit Windows 10 or later
+Builder: Python 3.13.7 and PyInstaller 6.16.0
+Signature: Unsigned experimental build
+
+ThirdWayNodePlayer.exe
+Size: 9066701 bytes
+SHA-256: D499B6E7338B3D08F116248142BF7774F678B6942E0285B2CFD92CF9578B30F3
+
+Automated tests: 11 passed
+
+Verified without physical hardware:
+
+* The Node and Deck receiver complete an HTTP transfer end to end.
+* The playback position is preserved in milliseconds.
+* The Deck publishes a resume record only after size and SHA-256 verification.
+* A bad fingerprint discards the incomplete file.
+* Unsafe directory components are removed from received filenames.
+* Abandoned partial transfers are removed when the Deck receiver restarts.
+* Seconds, MM:SS, and HH:MM:SS timecodes parse consistently.
+* The local Node player supports whole-file and byte-range video reads.
+* The local player embeds no remote web content.
+* The Deck playback command preserves the resume point to one millisecond.
+* The packaged Windows executable starts and displays its command help.
+
+Not yet verified:
+
+* Booting GuideOS on the physical RG35XX H.
+* USB gadget networking between Windows and the physical Deck.
+* Transfer speed for a full movie.
+* Hardware-decoded playback and audio on the Deck.
+* Resume accuracy on the physical player.

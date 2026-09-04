@@ -1,21 +1,21 @@
-HHGttG: THE GUIDE AND FIRST PROTOTYPE
-====================================
+THE THIRD WAY: HHGttG AND THE FIRST PROTOTYPE
+==============================================
 
-Status: Working system definition, version 0.1
+Status: Working system definition, version 0.2
 
 1. THEORETICAL DEFINITION
 -------------------------
 
-HHGttG, displayed as HHG and commonly called the Guide, is an open,
-local-first protocol and personal-computing architecture through which
-person-owned Decks communicate with modular Interfacing Devices and federated
-Nodes.
+The Third Way is the larger idea: an open, local-first form of personal
+computing centered on the person rather than a platform owner. HHGttG remains
+the protocol and architecture through which person-owned Decks communicate
+with modular Interfacing Devices and federated Nodes.
 
-The Guide exists to give an individual practical access to knowledge, other
+The Third Way exists to give an individual practical access to knowledge, other
 people, services, tools, and the digitally represented world without making a
 central platform the owner of the person's identity or information.
 
-The Guide is not primarily:
+The Third Way is not primarily:
 
 * A smartphone.
 * A single physical product.
@@ -251,7 +251,25 @@ administered systems without requiring an account from a central provider.
 11. FIRST PROTOTYPE ACCEPTANCE TEST
 -----------------------------------
 
-The first acceptance test is local media handoff in an unfamiliar home:
+The first acceptance test is continuity from a Node to the portable Deck:
+
+1. Play an authorized local video on the user's desktop Node.
+2. Pause it and request "Continue on Deck."
+3. Connect the Anbernic Deck to the Node through USB.
+4. Confirm the destination, available space, filename, file size, and current
+   playback position before writing.
+5. Transfer the video and a small, open resume record to temporary storage on
+   the Deck.
+6. Verify the complete file, then make both items visible to the Deck as one
+   atomic handoff; an interrupted copy must not appear complete.
+7. Disconnect the Deck and resume the video locally within two seconds of the
+   position reported by the Node, allowing for video keyframe seeking.
+8. Require no internet connection, cloud account, or Semiotic Engine.
+
+The test applies to user-owned, public-domain, or otherwise authorized local
+media. It does not claim to extract or copy protected subscription streams.
+
+The following acceptance test is local media handoff in an unfamiliar home:
 
 1. Store a user-owned movie on the Deck's removable memory.
 2. Join the same Wi-Fi network as an unknown-model smart television.
@@ -265,6 +283,28 @@ The first acceptance test is local media handoff in an unfamiliar home:
 8. Withdraw the temporary share when playback ends, the Deck leaves, or the
    user revokes it.
 
-This test demonstrates the Guide's central claim at a small but visible scale:
+This test demonstrates the Third Way's central claim at a small but visible scale:
 the person carries data and intent, while unfamiliar local technology supplies
 a capability through an interoperable interface.
+
+
+12. SECONDARY EVENT-ROUTING TEST
+--------------------------------
+
+`MESSAGE-CHIME-0` tests a simple Guide Recipe across a phone and Deck:
+
+WHEN my phone receives a text from Dad
+THEN ask my Deck to play the selected sound once.
+
+The sender's and recipient's cellular providers are outside the Guide path and
+do not need to match. The phone observes the receipt through an explicitly
+authorized operating-system adapter, reduces it to the minimum event needed by
+the Recipe, and sends that event to the paired Deck on the local Wi-Fi network.
+The default event contains a paired-person identifier, a unique event ID, and a
+time—not the message text.
+
+The Deck accepts events only from the paired phone, rejects old or repeated
+event IDs, limits repeated sound triggers, and requires separate
+`messages.observe-sender` and `audio.play` capabilities. The sound is stored and
+played on the Deck. Platform-specific phone restrictions must be reported
+plainly rather than bypassed.

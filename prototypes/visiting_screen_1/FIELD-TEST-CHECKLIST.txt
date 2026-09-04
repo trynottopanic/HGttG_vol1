@@ -1,0 +1,61 @@
+VISITING-SCREEN-1 FIELD TEST
+============================
+
+BEFORE LEAVING
+
+[ ] Use a short video you created, a public-domain video, or another video you
+    are clearly authorized to show in the store.
+[ ] Prefer an MP4 containing H.264 video and AAC audio for the first attempt.
+[ ] Take the ThirdWay VISITING-SCREEN-1 ZIP and its SHA-256 checksum.
+[ ] Take the Deck computer, its charger, and the authorized test video.
+[ ] Do not assume the store owner will agree or has authority over the TV and
+    network. Accept a refusal immediately.
+
+WITH THE OWNER
+
+[ ] Explain that this is unsigned experimental software and local network
+    discovery, not a commercial product.
+[ ] Confirm that the owner controls the Windows computer, network, and TV.
+[ ] Let the owner read OWNER-INSTRUCTIONS.txt before running anything.
+[ ] Read DECK-INSTRUCTIONS.txt before offering the movie.
+[ ] Have the owner run the installer, read its explanation, and start Third Way
+    Temporary Node themselves.
+[ ] If prompted, the owner allows only the network profile they control.
+[ ] Connect the Deck computer to the same owner-approved local network.
+[ ] Run ThirdWayDeck.exe, choose the test video, and paste the Visitor pairing
+    address shown on the owner's screen.
+[ ] Keep the Deck program open. Confirm the owner sees the filename and size;
+    the full movie should not be transferred to the owner's host.
+[ ] Let the owner verify the filename and size, search for TVs, select the
+    intended TV, and press Play.
+
+RECORD THE RESULT
+
+[ ] Did the intended TV appear by its correct name and model?
+[ ] Did the TV accept the playback request?
+[ ] Did video appear?
+[ ] Did audio play?
+[ ] Did seeking work?
+[ ] Did Stop and revoke end playback?
+[ ] Was the movie unavailable after revocation?
+[ ] Did the Deck report or behave as revoked after the owner stopped access?
+
+INTERPRETING FAILURE
+
+No TVs found:
+The network may block multicast or isolate clients, the TV may be on another
+network segment, or the TV may not advertise UPnP/DLNA AVTransport.
+
+TV found but request rejected:
+The TV may require a vendor-specific protocol or additional authorization.
+
+Playback accepted but no usable picture or sound:
+The TV probably cannot decode the video's container, video codec, audio codec,
+resolution, or bitrate. The prototype does not yet transcode.
+
+FINISH
+
+[ ] The owner presses Stop and revoke.
+[ ] The owner closes the host window.
+[ ] The owner deletes the extracted prototype if they do not want to keep it.
+[ ] Do not troubleshoot by weakening the store's network security.

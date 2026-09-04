@@ -32,10 +32,11 @@ its own permissions; authority and private information never travel merely
 because the package does.
 
 The first hardware target is the Anbernic RG35XX H. The first functional
-milestone is `VISITING-SCREEN-0`: select one movie stored on the Deck, join an
-unfamiliar household Wi-Fi network, discover an unknown smart television,
-grant a temporary one-file capability, and play the movie without uploading it
-to an internet service.
+milestone is `CONTINUE-ON-DECK-0`: pause an authorized local video on a desktop
+Node, connect the Deck by USB, transfer the video and its playback position,
+disconnect, and resume locally on the Deck. `VISITING-SCREEN-1` follows after
+that: the Deck joins an owner-approved local network and offers its video to a
+compatible television through a temporary Node.
 
 ## Distribution boundary
 
@@ -72,8 +73,10 @@ but `BRINGUP-0` temporarily pins Linux 7.1.2 because that is the exact release
 targeted by the currently tested H700 display and wireless patch set. Release
 builds will never follow a moving branch implicitly.
 
-Buildroot requires a Linux build host. The current workshop is Ubuntu 24.04 in
-WSL2, with generated files isolated under `/home/hacker/guideos-work`.
+Buildroot requires a Linux build host. The current workshop is Ubuntu in WSL2,
+with generated files isolated under `/home/hacker/guideos-work`. GuideOS does
+not depend on one Ubuntu release; the exact tools used for a release belong in
+its build record.
 
 ## Image policy
 
@@ -97,11 +100,14 @@ been built, inspected, hashed, and the physical target has been confirmed again.
 1. Import and audit an RG35XX H hardware-support baseline.
 2. Reproduce a minimal boot to display with working controls and clean shutdown.
 3. Enable both microSD slots and persistent data separation.
-4. Enable Wi-Fi with an explicit local configuration flow.
-5. Add development SSH using public-key authentication.
-6. Add the Guide supervisor and semantic input events.
-7. Add receiver discovery and the bounded media-share service.
-8. Run `VISITING-SCREEN-0` and record compatible and failed routes.
+4. Enable a bounded USB data link and atomic media import.
+5. Add local playback and resume-state handling.
+6. Run `CONTINUE-ON-DECK-0` and record transfer and resume accuracy.
+7. Enable Wi-Fi with an explicit local configuration flow.
+8. Add development SSH using public-key authentication.
+9. Add the Guide supervisor and semantic input events.
+10. Add receiver discovery and the bounded media-share service.
+11. Run `VISITING-SCREEN-1` and record compatible and failed routes.
 
 ## Non-goals for the first image
 

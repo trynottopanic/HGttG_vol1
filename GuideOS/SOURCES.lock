@@ -28,7 +28,7 @@ release_tar_sha256 = 03bb43c58d2343ee48dd191e0f181f0108425b179d84519add3a977071c
 version = 2.12.0
 repository = https://github.com/ARM-software/arm-trusted-firmware.git
 platform = sun50i_h616
-status = tarball-hash-pending-first-build
+buildroot_git_archive_sha256 = 10c5c5179acb0e3790fe28748651733f1514f7916042819ec09d624f087390c9
 
 [hardware-reference]
 name = ROCKNIX

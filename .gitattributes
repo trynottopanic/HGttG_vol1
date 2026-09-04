@@ -13,7 +13,12 @@
 *.dts text eol=lf
 *.patch text eol=lf
 *.sh text eol=lf
+*.patch whitespace=-blank-at-eol,-space-before-tab
+*.py text eol=lf
+*.ps1 text eol=lf
+.gitignore text eol=lf
 GuideOS/board/common/rootfs-overlay/etc/** text eol=lf
+GuideOS/board/rg35xxh/prototype-overlay/etc/** text eol=lf
 
 # Generated design concepts are binary.
 *.png binary

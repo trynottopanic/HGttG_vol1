@@ -1,0 +1,36 @@
+THIRD WAY TEMPORARY NODE 0.1.0 - STORE OWNER INSTRUCTIONS
+==========================================================
+
+Only run this experiment if you control the computer, local network, and TV,
+and you freely agree to the visitor's requested playback.
+
+1. Install Third Way Temporary Node only if you understand and approve this
+   experiment. The installer does not require an account or add an automatic
+   startup service.
+2. Start Third Way Temporary Node from the Start menu.
+3. If Windows Firewall asks, allow access on Private networks only. Do not
+   allow Public network access.
+4. Your browser opens the owner console. Keep this page private.
+5. Give the visitor only the displayed Visitor pairing address.
+6. After the Deck's offer appears, check its filename and size. The movie stays
+   on the Deck; your host receives only temporary local addresses and metadata.
+7. Press Search for TVs.
+8. If the intended TV appears, press its Play button. Discovery does not
+   guarantee that the TV supports the movie's video and audio formats.
+9. Press Stop and revoke when finished, then close the Node window. This
+   tells the Deck to stop serving the movie immediately.
+
+Closing the program revokes the Deck's temporary stream. You can also delete
+the program afterward through Windows Settings if you do not want to keep it.
+It does not install or run a background service.
+
+CURRENT LIMITS
+
+* This unsigned experimental program may trigger a Windows warning.
+* Local traffic is not yet encrypted.
+* Only TVs advertising UPnP/DLNA AVTransport are supported.
+* The host does not transcode an incompatible movie.
+* Use this only for a movie the visitor is permitted to show.
+
+If anything is unclear, decline the test. Consent is a requirement, not an
+obstacle to work around.

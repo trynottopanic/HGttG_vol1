@@ -10,6 +10,14 @@
 *.sdcard
 *.wic
 
+# Local prototype packaging output
+/prototypes/**/build/
+/prototypes/**/dist/
+/prototypes/**/installer-dist/
+/prototypes/**/*.spec
+__pycache__/
+*.pyc
+
 # Local Buildroot state
 .config
 .config.old

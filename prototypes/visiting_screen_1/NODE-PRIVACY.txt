@@ -1,0 +1,34 @@
+THIRD WAY TEMPORARY NODE 0.1.0
+WHAT THIS PROGRAM DOES
+==============================
+
+This program temporarily turns this Windows computer into a Third Way Node.
+Install it only if you control this computer and approve the experiment.
+
+WHILE YOU RUN IT
+
+* It accepts a one-time pairing request from a visitor on your private local
+  network.
+* It receives the offered movie's filename, size, format, and temporary local
+  addresses. In the normal workflow, it does not copy the complete movie.
+* It searches the local network for TVs that advertise UPnP/DLNA playback.
+* It sends a playback request only after you select a TV and press Play.
+* You can press Stop and revoke or close the program at any time.
+
+WHAT IT DOES NOT DO
+
+* It does not require or create an online account.
+* It does not upload information to a Third Way cloud service.
+* It does not start automatically with Windows.
+* It does not install a background service.
+* It does not grant the visitor access to your files or owner controls.
+
+CURRENT LIMITS
+
+Local traffic is not encrypted, the experimental program is not yet digitally
+signed, and only compatible UPnP/DLNA televisions are supported. Windows may
+therefore show an unfamiliar-publisher warning and ask whether to permit local
+network access. Permit Private networks only if you wish to continue.
+
+Uninstalling through Windows Settings removes the program and its shortcuts.
+Closing the program first revokes active access.

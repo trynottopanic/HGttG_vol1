@@ -1,7 +1,36 @@
-HHGttG DESIGN PHILOSOPHY
-========================
+THE THIRD WAY: DESIGN PHILOSOPHY
+================================
 
-Status: Foundational summary, version 0.2
+Status: Foundational summary, version 0.4
+
+BEYOND THE FALSE CHOICE
+
+The Third Way does not automatically choose one of two opposing forces, nor
+does it split the difference merely for the sake of compromise. It examines
+both, selects what genuinely serves people from each, rejects what subordinates
+or harms them, and tries to move the whole system in the resulting direction.
+Its destination is determined by principles and consequences rather than by
+loyalty to an inherited side.
+
+FORMLESS IN METHOD, FIRM IN PURPOSE
+
+The Third Way draws from Bruce Lee's philosophy of Jeet Kune Do: simplicity,
+directness, freedom, adaptability, honest self-expression, and resistance to
+rigid schools of thought. No operating system, language, interface, network
+medium, hardware family, or agent model should become doctrine. Each is a tool
+to be tested against lived experience and the purpose at hand.
+
+Useful methods may be taken from different traditions without importing their
+institutional rivalries. Unhelpful complexity should be removed, and missing
+methods should be created for the actual person and situation. This is not an
+excuse for arbitrary design: freedom of method remains bounded by evidence,
+security, reciprocal autonomy, and the user's clearly expressed intent.
+
+Guide technology should meet a need as directly as safety allows. Interfaces
+should expose the shortest understandable path from intention to result;
+security should intercept harmful or unauthorized action before it propagates;
+and modular systems should change form as their circumstances change without
+losing their ethical center.
 
 THE PERSON IS THE PLATFORM
 
@@ -12,7 +41,7 @@ to a vendor's platform.
 
 SERVE INTENTION, NOT ENGAGEMENT
 
-The Guide exists to help a person understand something, communicate, create,
+The Third Way exists to help a person understand something, communicate, create,
 organize, decide, or act. It should not optimize for advertising exposure,
 compulsive use, time-on-screen, or dependence on the system.
 
@@ -65,7 +94,7 @@ Technology": use mature, inexpensive, abundant, and well-understood technology
 in new combinations instead of making novelty or maximum performance an end in
 itself.
 
-The Guide's innovation should come primarily from the relationships it creates
+The Third Way's innovation should come primarily from the relationships it creates
 among familiar components. Commodity processors, cheap displays, established
 radios, standard connectors, discarded tablets, and ordinary storage can
 become a new personal and community computing environment when joined by an
@@ -90,11 +119,11 @@ HONESTNESS BEFORE SPEED
 
 Fast responses are desirable, but speed must not take precedence over informing
 the user of the results and implications of what their question posits. The
-Guide should communicate progress, evidence, limits, and uncertainty plainly.
+Third Way should communicate progress, evidence, limits, and uncertainty plainly.
 
 AUTONOMY IS RECIPROCAL
 
-The Guide protects its owner while respecting the equal autonomy of others. A
+The Third Way protects its users while respecting the equal autonomy of others. A
 Deck must resist unauthorized access and must not use its hardware, software,
 agents, or network capacity to unreasonably harm, deceive, surveil, overwhelm,
 or disrupt other people and systems.
@@ -107,7 +136,7 @@ interface is assumed to suit every person.
 
 KNOWLEDGE SHOULD REMAIN EXAMINABLE
 
-The Guide should help people reach humanity's accumulated knowledge while
+The Third Way should help people reach humanity's accumulated knowledge while
 preserving sources, provenance, competing interpretations, and uncertainty. An
 agent should help the person understand information rather than become an
 unquestionable authority standing between the person and it.
@@ -134,4 +163,67 @@ Every major decision should be tested by asking:
     Does this help a person understand and direct their digital life while
     preserving the same freedom and safety for everyone else?
 
-If the answer is no, the design does not belong in the Guide.
+If the answer is no, the design does not belong in the Third Way.
+
+LIST OF INFLUENCES
+
+The Third Way is an original project, but it did not arise without precedent.
+The following people, works, and systems are credited for ideas that have
+directly influenced its language or design. Inclusion here records influence;
+it does not imply endorsement, affiliation, or ownership of the Third Way by
+the people or organizations named.
+
+DOUGLAS ADAMS AND THE HITCHHIKER'S GUIDE TO THE GALAXY
+
+Douglas Adams's work inspired the original HHGttG name and the image of a
+portable guide through an overwhelming informational universe. His combination
+of humane skepticism, technological imagination, accessibility, and humor
+influenced the aspiration to make immense systems understandable to ordinary
+people. HHGttG remains the protocol name in tribute, while the larger project
+is now called the Third Way.
+
+    https://www.douglasadams.com/dna/bio.html
+
+GUNPEI YOKOI
+
+Gunpei Yokoi's principle commonly translated as "Lateral Thinking with
+Withered Technology" inspired the preference for mature, inexpensive,
+well-understood components used in inventive combinations. The Third Way
+adopts this as a reason to value availability, repairability, and proven
+utility over novelty for its own sake.
+
+    https://gamestudies.org/1601/articles/reynolds
+
+BRUCE LEE AND TAO OF JEET KUNE DO
+
+Bruce Lee's Tao of Jeet Kune Do and the philosophy surrounding Jeet Kune Do
+inspired the principles of simplicity, directness, freedom, adaptability,
+honest individual expression, and freedom from rigid schools. The Third Way
+applies those ideas to computing by treating technologies as replaceable tools,
+testing methods against experience, and remaining flexible in implementation
+while firm in ethical purpose.
+
+    https://bruceleefoundation.org/jeetkunedo/
+    https://brucelee.com/podcast-blog/2016/9/14/10-simplicity-directness-freedom
+
+WIREMOD AND EXPRESSION 2
+
+Wiremod and its Expression 2 scripting language for Garry's Mod inspired the
+Guide Recipe concept: small, understandable programs that connect inputs,
+devices, information, and actions in a form ordinary users can experiment with
+and exchange. The influence is an interaction and creation model, not a claim
+that Guide Recipes reproduce or contain Expression 2.
+
+    https://github.com/wiremod/wire
+
+DISCORD'S SERVER METAPHOR
+
+Discord's familiar organization of people, roles, channels, and shared spaces
+inspired one way of explaining community and workplace Nodes. The Third Way
+borrows the understandable social metaphor, not Discord's centralized service
+architecture: Third Way Nodes must remain independently hostable and mutually
+interoperable.
+
+This list should grow whenever a person, work, community, or system materially
+shapes the Third Way. Credit should identify the particular contribution
+rather than merely attach a prestigious name to the project.

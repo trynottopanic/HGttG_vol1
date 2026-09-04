@@ -12,10 +12,7 @@ diff --git a/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts 
 index a8f36c4f1..1c2637d21 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
-@@ -47,111 +47,156 @@ chosen {
- 		stdout-path = "serial0:115200n8";
- 	};
- 
+@@ -51,108 +51,153 @@
 -	gpio_keys_gamepad: gpio-keys-gamepad {
 -		compatible = "gpio-keys";
 +	joypad: rocknix-singleadc-joypad {
@@ -397,4 +394,3 @@ index bef4d1074..83bdbeef6 100644
  };
 -- 
 2.47.1
-

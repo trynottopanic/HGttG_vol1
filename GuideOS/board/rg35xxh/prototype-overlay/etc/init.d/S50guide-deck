@@ -1,0 +1,34 @@
+#!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+pid_file=/run/guide-deck.pid
+
+case "$1" in
+    start)
+        mkdir -p /data/guide-media
+        printf '\033[2J\033[H' > /dev/tty0
+        i=0
+        while [ ! -e /sys/class/net/usb0 ] && [ "$i" -lt 50 ]; do
+            sleep 0.1
+            i=$((i + 1))
+        done
+        if [ ! -e /sys/class/net/usb0 ]; then
+            printf 'Guide USB link was not created. Restart the Deck with its USB cable attached.\n' > /dev/tty0
+            exit 1
+        fi
+        /usr/bin/python3 /usr/lib/guide/deck_runtime.py >/dev/tty0 2>&1 &
+        printf '%s\n' "$!" > "$pid_file"
+        ;;
+    stop)
+        if [ -r "$pid_file" ]; then
+            kill "$(cat "$pid_file")" 2>/dev/null || true
+            rm -f "$pid_file"
+        fi
+        ;;
+    restart)
+        "$0" stop
+        "$0" start
+        ;;
+esac
+
+exit 0

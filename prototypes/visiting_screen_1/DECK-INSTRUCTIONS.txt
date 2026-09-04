@@ -1,0 +1,37 @@
+THIRD WAY DECK MEDIA 0.1.0 - VISITOR INSTRUCTIONS
+==================================================
+
+Use this experiment only with the informed permission of the person who
+controls the destination network and television. Use a movie you are legally
+permitted to show.
+
+1. Connect the Deck computer to the owner's approved local network.
+2. Ask the owner to start Third Way Temporary Node and give you the displayed Visitor
+   pairing address. The address works once and expires after 15 minutes.
+3. Double-click ThirdWayDeck.exe.
+4. Drag the movie file into the black Deck window, then press Enter.
+5. Paste the complete Visitor pairing address, then press Enter.
+6. Keep the Deck computer awake, connected, and the program open while the
+   owner reviews the offer and controls playback.
+7. Press Enter in the Deck window whenever you want to withdraw your offer.
+
+The movie remains on the Deck. The owner's host receives its filename, size,
+media type, and temporary local addresses, but does not receive a full copy in
+this primary workflow. The destination TV reads the temporary stream directly
+from the Deck.
+
+The owner can stop playback and revoke the stream from the host at any time.
+Access also ends when you press Enter, close the Deck program, disconnect from
+the network, or reach the six-hour time limit.
+
+CURRENT LIMITS
+
+* These unsigned experimental programs may trigger a Windows warning.
+* Local traffic is not yet encrypted.
+* Only TVs advertising UPnP/DLNA AVTransport can be selected automatically.
+* The Deck does not yet convert video into a format the TV supports.
+* A TV may be discovered and still reject an incompatible movie.
+
+If the host rejects the pairing address or cannot find the Deck, confirm that
+both computers are on the same owner-approved private network. Do not weaken
+the network's security settings to force the test.

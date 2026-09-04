@@ -14,10 +14,7 @@ the USB nodes now present upstream.
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts b/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
 --- a/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
-@@ -199,6 +199,15 @@
- 		regulator-max-microvolt = <5000000>;
- 	};
- 
+@@ -264,3 +264,12 @@
 +	reg_vcc3v3_mmc2: regulator-vcc3v3-mmc2 {
 +		compatible = "regulator-fixed";
 +		enable-active-high;
