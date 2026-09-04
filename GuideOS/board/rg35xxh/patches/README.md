@@ -23,8 +23,11 @@ by `CONTINUE-ON-DECK-0`. HDMI audio can return as a separately tested feature.
 - `uboot/` modifies U-Boot and retains its upstream GPL licensing.
 - `arm-trusted-firmware/` modifies Trusted Firmware-A and retains its upstream
   BSD-3-Clause licensing.
+- `gcc/` contains a GuideOS compatibility patch for building GCC 13 against
+  current Linux kernel headers.
 
-At `build.090326`, sequential applicability validation has progressed through
-the H700 storage changes but is not yet complete. A complete image has not yet
-been produced. Unrelated ROCKNIX interface, branding, emulator, and
-distribution material is intentionally excluded.
+The DDR4 prototype configuration has produced a complete RG35XX H image with
+the local media-handoff runtime. Physical boot, display, controls, audio, and
+USB gadget behavior still require validation on the target handheld.
+Unrelated ROCKNIX interface, branding, emulator, and distribution material is
+intentionally excluded.

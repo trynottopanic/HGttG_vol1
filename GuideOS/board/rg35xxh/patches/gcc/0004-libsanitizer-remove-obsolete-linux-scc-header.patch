@@ -1,0 +1,52 @@
+From 0d9df0667c4e4d4d1a256447ce28469240000004 Mon Sep 17 00:00:00 2001
+From: GuideOS Project <guideos@localhost>
+Date: Fri, 4 Sep 2026 00:00:00 +0000
+Subject: [PATCH] libsanitizer: remove obsolete linux/scc.h include
+
+Current Linux UAPI headers no longer provide linux/scc.h. GCC 13's
+libsanitizer retains unused declarations derived from that header, so
+remove both the include and those declarations to permit a C++-enabled
+cross-toolchain build.
+
+Signed-off-by: GuideOS Project <guideos@localhost>
+---
+ libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cpp | 3 ---
+ libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h   | 2 --
+ 2 files changed, 5 deletions(-)
+
+diff --git a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cpp b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cpp
+index 9cbf2cf..1027e3c 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cpp
++++ b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cpp
+@@ -150,7 +150,6 @@ typedef struct user_fpregs elf_fpregset_t;
+ #include <linux/lp.h>
+ #include <linux/mroute.h>
+ #include <linux/mroute6.h>
+-#include <linux/scc.h>
+ #include <linux/serial.h>
+ #include <sys/msg.h>
+ #include <sys/ipc.h>
+@@ -499,8 +498,6 @@ namespace __sanitizer {
+   unsigned struct_kbsentry_sz = sizeof(struct kbsentry);
+   unsigned struct_mtconfiginfo_sz = sizeof(struct mtconfiginfo);
+   unsigned struct_nr_parms_struct_sz = sizeof(struct nr_parms_struct);
+-  unsigned struct_scc_modem_sz = sizeof(struct scc_modem);
+-  unsigned struct_scc_stat_sz = sizeof(struct scc_stat);
+   unsigned struct_serial_multiport_struct_sz
+       = sizeof(struct serial_multiport_struct);
+   unsigned struct_serial_struct_sz = sizeof(struct serial_struct);
+diff --git a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h
+index 2a65577..840cddd 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h
++++ b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h
+@@ -1027,8 +1027,6 @@ extern unsigned struct_kbkeycode_sz;
+ extern unsigned struct_kbsentry_sz;
+ extern unsigned struct_mtconfiginfo_sz;
+ extern unsigned struct_nr_parms_struct_sz;
+-extern unsigned struct_scc_modem_sz;
+-extern unsigned struct_scc_stat_sz;
+ extern unsigned struct_serial_multiport_struct_sz;
+ extern unsigned struct_serial_struct_sz;
+ extern unsigned struct_sockaddr_ax25_sz;
+-- 
+2.43.0

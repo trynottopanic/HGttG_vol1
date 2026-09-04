@@ -17,6 +17,8 @@ case "$1" in
         mkdir -p "$gadget/configs/c.1/strings/0x409"
         printf 'Private Node-to-Deck link' > "$gadget/configs/c.1/strings/0x409/configuration"
         mkdir -p "$gadget/functions/rndis.usb0"
+        printf 'RNDIS' > "$gadget/functions/rndis.usb0/os_desc/interface.rndis/compatible_id"
+        printf '5162001' > "$gadget/functions/rndis.usb0/os_desc/interface.rndis/sub_compatible_id"
         ln -s "$gadget/functions/rndis.usb0" "$gadget/configs/c.1/rndis.usb0" 2>/dev/null || true
         mkdir -p "$gadget/os_desc"
         printf '1' > "$gadget/os_desc/use"
@@ -33,6 +35,20 @@ case "$1" in
             done
             ip address replace 192.168.77.2/24 dev usb0
             ip link set usb0 up
+            dnsmasq --interface=usb0 --bind-interfaces \
+                --dhcp-range=192.168.77.1,192.168.77.1,255.255.255.0,1h \
+                --dhcp-option=3 --port=0 --no-resolv \
+                --pid-file=/run/guide-dnsmasq.pid
+        fi
+        ;;
+    stop)
+        if [ -r /run/guide-dnsmasq.pid ]; then
+            kill "$(cat /run/guide-dnsmasq.pid)" 2>/dev/null || true
+            rm -f /run/guide-dnsmasq.pid
+        fi
+        gadget=/sys/kernel/config/usb_gadget/guide
+        if [ -d "$gadget" ]; then
+            printf '' > "$gadget/UDC" 2>/dev/null || true
         fi
         ;;
 esac
