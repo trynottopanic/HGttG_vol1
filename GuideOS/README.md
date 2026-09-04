@@ -3,7 +3,8 @@
 GuideOS is the provisional name of the HHG-owned Linux distribution for Decks.
 This directory is the beginning of its reproducible source tree.
 
-Current status: **Stage 0 scaffold — not yet bootable and not safe to flash.**
+Current status: **Stage 1 hardware integration — candidate build in progress
+and not yet approved for flashing.**
 
 ## Human-accessibility requirement
 
@@ -61,17 +62,18 @@ files are present:
 - `external.mk`
 
 The root filesystem overlay begins under `board/common/rootfs-overlay`.
-A board defconfig will be added only after the RG35XX H boot chain and required
-firmware have been reproduced from reviewed sources.
+The initial board layer provides separate LPDDR3 and LPDDR4 definitions, both
+known panel descriptions, a Windows-readable boot partition, and a minimal
+diagnostic userspace.
 
-The approved initial build baseline is Buildroot 2025.02.17 from the 2025.02.x
-long-term-support series. The intended kernel line is Linux 6.18.y. A precise
-kernel maintenance release will be locked only after RG35XX H bring-up tests;
-release builds will never follow a moving branch implicitly.
+The approved build baseline is Buildroot 2025.02.17 from the 2025.02.x
+long-term-support series. Linux 6.18.y remains the intended stabilization line,
+but `BRINGUP-0` temporarily pins Linux 7.1.2 because that is the exact release
+targeted by the currently tested H700 display and wireless patch set. Release
+builds will never follow a moving branch implicitly.
 
-Buildroot requires a Linux build host. This Windows computer currently has
-neither Docker nor a WSL Linux distribution, so Stage 1 requires establishing
-one isolated Linux build environment before compiling an image.
+Buildroot requires a Linux build host. The current workshop is Ubuntu 24.04 in
+WSL2, with generated files isolated under `/home/hacker/guideos-work`.
 
 ## Image policy
 

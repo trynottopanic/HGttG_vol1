@@ -7,5 +7,32 @@ repository = https://gitlab.com/buildroot.org/buildroot.git
 commit = d0820dd09916edcefc44e525355afbea30d5bee4
 
 [linux]
-series = 6.18.y
-status = exact-release-pending-rg35xxh-bringup
+role = rg35xxh-bringup-only
+version = 7.1.2
+repository = https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.1.2.tar.xz
+sha256 = 37198c93727be247c9fb5309bb86cd5e496c61e5322cd8c4eca9476bb0b5883f
+note = Linux 6.18.y remains the intended stabilization line; its 6.18.48 source was audited but lacks the complete in-tree RG35XX H display and wireless description.
+
+[linux-6.18-audit]
+version = 6.18.48
+repository = https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.48.tar.xz
+sha256 = 5ebdadb10a4b5708fc6b1c457764a110bc49f8150cc3502c59b921ead8c6fc8c
+
+[u-boot]
+version = 2026.01
+repository = https://github.com/u-boot/u-boot.git
+commit = 127a42c7257a6ffbbd1575ed1cbaa8f5408a44b3
+release_tar_sha256 = 03bb43c58d2343ee48dd191e0f181f0108425b179d84519add3a977071c3f654
+
+[arm-trusted-firmware]
+version = 2.12.0
+repository = https://github.com/ARM-software/arm-trusted-firmware.git
+platform = sun50i_h616
+status = tarball-hash-pending-first-build
+
+[hardware-reference]
+name = ROCKNIX
+release = 20260901
+repository = https://github.com/ROCKNIX/distribution.git
+commit = 1ebff24f36501fb6493beb2bf83bf2604536d9aa
+use = source-and-provenance-reference-only

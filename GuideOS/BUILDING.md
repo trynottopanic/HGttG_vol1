@@ -4,8 +4,8 @@ GuideOS is assembled on Linux with Buildroot. On Windows, the current reference
 workshop is Ubuntu 24.04 under WSL2. WSL2 lets Linux build tools run alongside
 Windows; it is not installed on the Deck.
 
-The first image is not available yet. These instructions currently verify only
-the build workshop and GuideOS project structure.
+The first `BRINGUP-0` image definitions are present. They are intended for
+controlled hardware testing and are not a finished GuideOS release.
 
 ## Install the workshop tools
 
@@ -76,5 +76,38 @@ Command dictionary:
 - A **defconfig** is the small saved list of choices needed to reproduce one
   hardware target's initial configuration.
 
-No GuideOS defconfig exists yet. It will be created only after the RG35XX H
-boot and hardware requirements have been audited.
+The list should include `guideos_rg35xxh_ddr3_defconfig` and
+`guideos_rg35xxh_ddr4_defconfig`.
+
+## Build an RG35XX H candidate
+
+Choose the memory type only if it is known. If it is unknown, build both; using
+the wrong image is expected to result in no boot rather than automatic
+detection.
+
+```sh
+mkdir -p /home/hacker/guideos-work/output-rg35xxh-ddr4
+make O=/home/hacker/guideos-work/output-rg35xxh-ddr4 \
+  BR2_EXTERNAL=/mnt/e/DGttG/HGttG_vol1/GuideOS \
+  guideos_rg35xxh_ddr4_defconfig
+env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  make O=/home/hacker/guideos-work/output-rg35xxh-ddr4 \
+  BR2_EXTERNAL=/mnt/e/DGttG/HGttG_vol1/GuideOS
+```
+
+For LPDDR3 hardware, replace every occurrence of `ddr4` with `ddr3`.
+
+Command dictionary:
+
+- `O=...` keeps generated files in a private output folder rather than mixing
+  them with Buildroot or public source files.
+- `guideos_rg35xxh_ddr4_defconfig` loads the saved choices for LPDDR4 units.
+- `env PATH=...` prevents Windows program locations containing spaces from
+  confusing Buildroot under WSL.
+- The second `make` downloads verified source packages, cross-compiles them for
+  ARM64, and assembles `images/sdcard.img`.
+- **LPDDR3/LPDDR4** are two kinds of working memory soldered inside different
+  production runs of the handheld; they are not the microSD card.
+
+Do not write `sdcard.img` to media merely because the build finishes. Inspect
+its partitions and hashes first, then identify the physical target again.

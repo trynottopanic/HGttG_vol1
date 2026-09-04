@@ -1,0 +1,34 @@
+From: GuideOS Project <guideos@localhost>
+Date: Thu, 3 Sep 2026 00:00:00 -0400
+Subject: [PATCH] arm64: dts: allwinner: h700: add RG35XX second-card regulator
+
+Linux 7.1.2 already carries the RG35XX-H USB regulator support, but the
+second microSD controller still refers to the fixed PE4 regulator added by
+the earlier H700 support series. Define that regulator without duplicating
+the USB nodes now present upstream.
+
+---
+ .../dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts b/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
+--- a/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-h700-anbernic-rg35xx-2024.dts
+@@ -199,6 +199,15 @@
+ 		regulator-max-microvolt = <5000000>;
+ 	};
+ 
++	reg_vcc3v3_mmc2: regulator-vcc3v3-mmc2 {
++		compatible = "regulator-fixed";
++		enable-active-high;
++		gpio = <&pio 4 4 GPIO_ACTIVE_HIGH>; /* PE4 */
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-name = "vcc3v3-mmc2";
++	};
++
+ 	reg_lcd: regulator-gpio-lcd-vdd {
+ 		compatible = "regulator-fixed";
+ 		regulator-min-microvolt = <3300000>;
+-- 
+2.43.0

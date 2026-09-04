@@ -1,6 +1,7 @@
 # RG35XX H board layer
 
-Status: hardware-enablement baseline not yet imported.
+Status: hardware-enablement baseline imported; candidate image build in
+progress. Nothing in this directory is yet declared safe for unattended use.
 
 The board layer must establish and test all of the following before a GuideOS
 image is offered for flashing:
