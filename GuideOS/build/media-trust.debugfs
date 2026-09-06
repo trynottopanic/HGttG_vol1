@@ -1,0 +1,38 @@
+rm /init
+write /mnt/g/GuideOS-private/muos-reference/guide-hello-fb-media /init
+set_inode_field /init mode 0100755
+rm /usr/sbin/guide-hello-fb
+write /mnt/g/GuideOS-private/muos-reference/guide-hello-fb-media /usr/sbin/guide-hello-fb
+set_inode_field /usr/sbin/guide-hello-fb mode 0100755
+rm /usr/lib/guideos/node-link/guide_node_client.py
+write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/node_link/guide_node_client.py /usr/lib/guideos/node-link/guide_node_client.py
+set_inode_field /usr/lib/guideos/node-link/guide_node_client.py mode 0100644
+rm /usr/lib/guideos/node-link/guide_node_bridge.py
+write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/node_link/guide_node_bridge.py /usr/lib/guideos/node-link/guide_node_bridge.py
+set_inode_field /usr/lib/guideos/node-link/guide_node_bridge.py mode 0100755
+mkdir /usr/lib/guideos/media
+mkdir /usr/lib/guideos/media/bin
+mkdir /usr/lib/guideos/media/lib
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/bin/ffmpeg /usr/lib/guideos/media/bin/ffmpeg
+set_inode_field /usr/lib/guideos/media/bin/ffmpeg mode 0100755
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/ld-linux-aarch64.so.1 /usr/lib/guideos/media/lib/ld-linux-aarch64.so.1
+set_inode_field /usr/lib/guideos/media/lib/ld-linux-aarch64.so.1 mode 0100755
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libasound.so.2 /usr/lib/guideos/media/lib/libasound.so.2
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libass.so.9 /usr/lib/guideos/media/lib/libass.so.9
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libavcodec.so.60 /usr/lib/guideos/media/lib/libavcodec.so.60
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libavdevice.so.60 /usr/lib/guideos/media/lib/libavdevice.so.60
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libavfilter.so.9 /usr/lib/guideos/media/lib/libavfilter.so.9
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libavformat.so.60 /usr/lib/guideos/media/lib/libavformat.so.60
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libavutil.so.58 /usr/lib/guideos/media/lib/libavutil.so.58
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libc.so.6 /usr/lib/guideos/media/lib/libc.so.6
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libdrm.so.2 /usr/lib/guideos/media/lib/libdrm.so.2
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libfreetype.so.6 /usr/lib/guideos/media/lib/libfreetype.so.6
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libfribidi.so.0 /usr/lib/guideos/media/lib/libfribidi.so.0
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libharfbuzz.so.0 /usr/lib/guideos/media/lib/libharfbuzz.so.0
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libm.so.6 /usr/lib/guideos/media/lib/libm.so.6
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libswresample.so.4 /usr/lib/guideos/media/lib/libswresample.so.4
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libswscale.so.7 /usr/lib/guideos/media/lib/libswscale.so.7
+write /mnt/g/GuideOS-private/muos-reference/media-runtime-0.1/lib/libz.so.1 /usr/lib/guideos/media/lib/libz.so.1
+mkdir /var/lib/guideos
+mkdir /var/lib/guideos/node-link
+set_inode_field /var/lib/guideos/node-link mode 040700

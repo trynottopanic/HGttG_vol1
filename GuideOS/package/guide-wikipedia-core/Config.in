@@ -1,0 +1,10 @@
+config BR2_PACKAGE_GUIDE_WIKIPEDIA_CORE
+	bool "guide-wikipedia-core"
+	depends on BR2_PACKAGE_PYTHON3
+	select BR2_PACKAGE_PYTHON3_SSL
+	select BR2_PACKAGE_CA_CERTIFICATES
+	help
+	  Native Guide Wikipedia data, interaction, and offline-storage core.
+	  It uses verified HTTPS and does not render remote HTML or JavaScript.
+	  A framebuffer view and working network interface are also required for
+	  the complete Deck application.

@@ -1,0 +1,7 @@
+READ-ONLY CARTRIDGE CARD INSPECTION
+Disk=4
+Name=TS-RDF5 SD  Transcend
+Serial=00000000TS38
+Bytes=250399948800
+Style=GPT
+Partition=1 Offset=1048576 Bytes=4294967296 Drive=I: FileSystem=FAT32 Label= Health=Healthy

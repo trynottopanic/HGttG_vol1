@@ -13,6 +13,12 @@ install -m 0644 \
     "${TARGET_DIR}/usr/lib/guide/deck_runtime.py"
 install -d "${TARGET_DIR}/data/guide-media"
 
+# The vendor-bridge initramfs hands control to /init.  Buildroot installs its
+# init program at /sbin/init, so expose the conventional root-level entry point
+# as well.  This is harmless for the fully open boot path and keeps the
+# userspace independent of which compatible boot chain started it.
+ln -snf /sbin/init "${TARGET_DIR}/init"
+
 install -d "${BINARIES_DIR}/extlinux"
 install -m 0644 "${board_dir}/extlinux-standard.conf" \
     "${BINARIES_DIR}/extlinux/extlinux.conf"

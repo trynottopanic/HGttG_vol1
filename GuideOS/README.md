@@ -3,8 +3,9 @@
 GuideOS is the provisional name of the HHG-owned Linux distribution for Decks.
 This directory is the beginning of its reproducible source tree.
 
-Current status: **Stage 1 hardware integration — candidate build in progress
-and not yet approved for flashing.**
+Current status: **Stage 2 physical prototype bring-up.** The Deck now boots to
+the GuideOS shell, accepts controls, shuts down safely, and recognizes a
+read-only metadata payload in the external microSD slot.
 
 ## Human-accessibility requirement
 
@@ -30,6 +31,58 @@ Finished Recipes and more advanced programs will be exchangeable as provisional
 formats for metadata, portable behavior, and assets. A receiving Deck grants
 its own permissions; authority and private information never travel merely
 because the package does.
+
+The first host-side Cartridge Workshop is available under `tools/cartridge`.
+It builds, verifies, and safely copies Guide Cartridge Format 1 packages using
+Windows PowerShell without administrator access. The current Deck prototype
+does not import or run Format 1 packages yet.
+
+Development of a native, reading-first Wikipedia application has begun under
+`apps/wikipedia`. Its bounded MediaWiki client performs deliberate HTTPS
+search/article requests and returns plain text rather than rendering remote
+HTML or JavaScript. Controller interaction, article paging, visible failures,
+and an atomic offline store are covered by host tests. The framebuffer view
+still depends on the Wi-Fi platform feature and a shell application handoff.
+
+The complementary Node-side Wikipedia library lives under `node/wikipedia`.
+It can plan, resume, and verify Wikimedia's current English article dump,
+stream its XML one page at a time, and produce conservative readable text
+without asking a Deck to store or process the whole archive.
+
+The first lightweight Windows Node shell lives under `node/desktop`. It builds
+as one owner-facing program, supports local discovery and expiring pairing, and
+reports narrowly named capabilities without exposing a remote command shell.
+`DESKTOP_NODE_0.md` defines the encounter and protocol boundary.
+
+The current prototype can share one owner-selected media folder. A paired Deck
+receives a bounded catalogue with no Windows paths and requests a short-lived
+ticket for one selected audio or video file; changed files are withheld until
+the owner rescans. The Deck decodes the stream locally and retains stop and
+pause controls while playback is active.
+
+The Windows Node prepares demanding video in a private cache without modifying
+the owner's original. A single bounded worker uses FFmpeg when available or
+the locally installed VLC engine to produce a 640×360, 8-bit H.264, stereo AAC
+MP4 derivative. Audio remains direct; video appears in the Deck catalogue only
+after its compatible copy is complete. Stopping folder sharing cancels an
+active preparation, and a source-file change invalidates the old derivative.
+
+Trusted-companion pairing is reciprocal and revocable. The Node owner arms one
+trust request in the Windows interface, then the paired Deck owner accepts it
+with `X`; both devices retain a random reconnect credential and stable local
+identity. Trust restores the same scoped session after an ordinary restart—it
+does not grant shell access or new capabilities. This first implementation
+still uses clearly labelled, unencrypted development HTTP and is therefore
+restricted to a trusted private LAN; persistent trust is not release-grade
+until an authenticated encrypted transport replaces it.
+The bounded Deck-side protocol client has begun under `apps/node_link`; it is
+ready for a controller-facing screen but is not yet installed in the image.
+
+Android applications are being treated as an optional provider rather than a
+requirement imposed on every Deck. `ANDROID_APPLICATION_PROVIDER_0.md` defines
+Guide-native adaptation, future on-Deck execution, and the first practical
+Node-hosted emulation route. The current Node can report installed Android
+tools but cannot start or control them.
 
 The first hardware target is the Anbernic RG35XX H. The first functional
 milestone is `CONTINUE-ON-DECK-0`: pause an authorized local video on a desktop

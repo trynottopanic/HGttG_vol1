@@ -1,0 +1,7 @@
+config BR2_PACKAGE_GUIDE_NODE_LINK_CORE
+	bool "guide-node-link-core"
+	select BR2_PACKAGE_PYTHON3
+	select BR2_PACKAGE_ALSA_LIB
+	help
+	  Bounded local discovery, pairing, media, and speaker-path support for
+	  Guide Desktop Nodes and the RG35XX H Deck prototype.

@@ -1,0 +1,5 @@
+config BR2_PACKAGE_GUIDE_HELLO_FB
+	bool "guide-hello-fb"
+	help
+	  Minimal framebuffer proof for the private RG35XX H compatibility
+	  bridge. It draws DON'T PANIC without a window system or console.

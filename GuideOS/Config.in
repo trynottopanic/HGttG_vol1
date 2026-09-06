@@ -1,2 +1,3 @@
-# GuideOS package configuration entries are added here as services become
-# independently buildable. The Stage 0 tree intentionally declares none.
+source "$BR2_EXTERNAL_GUIDE_OS_PATH/package/guide-hello-fb/Config.in"
+source "$BR2_EXTERNAL_GUIDE_OS_PATH/package/guide-wikipedia-core/Config.in"
+source "$BR2_EXTERNAL_GUIDE_OS_PATH/package/guide-node-link-core/Config.in"

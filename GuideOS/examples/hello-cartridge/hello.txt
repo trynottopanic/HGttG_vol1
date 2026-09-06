@@ -1,0 +1,3 @@
+Hello from a Guide cartridge.
+
+This is ordinary content. Packaging it does not give it permission to run.

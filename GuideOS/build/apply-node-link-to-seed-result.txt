@@ -1,0 +1,43 @@
+CAPTURED 7042E6DC6B338C9133B6843B9313AAA3ED275104AF9878B4CEDD5528DD1A328D
+rootfs: recovering journal
+Clearing orphaned inode 1189 (uid=0, gid=0, mode=0100755, size=995600)
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+Free blocks count wrong (485881, counted=485375).
+Fix? yes
+
+Free inodes count wrong (129876, counted=129867).
+Fix? yes
+
+
+rootfs: ***** FILE SYSTEM WAS MODIFIED *****
+rootfs: 1205/131072 files (0.2% non-contiguous), 38913/524288 blocks
+
+Allocated inode: 139
+
+Allocated inode: 143
+Allocated inode: 1152
+Allocated inode: 1153
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+rootfs: 1208/131072 files (0.2% non-contiguous), 38922/524288 blocks
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+rootfs: 1208/131072 files (0.2% non-contiguous), 38922/524288 blocks
+BASE 7042e6dc6b338c9133b6843b9313aaa3ed275104af9878b4cedd5528dd1a328d  /mnt/g/GuideOS-private/muos-reference/seed-node-link-base-rootfs.ext4
+ROOTFS 3d0b1854083bcf05004837b446490056ed808483869bfd3ee77a8504159ae1fe  /mnt/g/GuideOS-private/muos-reference/seed-node-link-next-rootfs.ext4
+SHELL 11f544eebe748681a1604cded4902a0ffe99d71d949f018cf2f0a9a28100678d
+CLIENT 2f050b7471a145f02b311de77f203b14ad3ff8affb47fa572b55e9d93a004dc4
+BRIDGE 092b896f9a61156ab02944b976a5c25dc6207cfd47460fc0a8c4161cb7f6f638
+PREPARED 3D0B1854083BCF05004837B446490056ED808483869BFD3EE77A8504159AE1FE
+WRITE 100%
+VERIFIED 3D0B1854083BCF05004837B446490056ED808483869BFD3EE77A8504159AE1FE

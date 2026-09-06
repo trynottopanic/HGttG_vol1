@@ -1,0 +1,8 @@
+select disk 4
+attributes disk
+detail disk
+clean
+rescan
+select disk 4
+detail disk
+exit

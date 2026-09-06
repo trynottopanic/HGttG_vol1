@@ -15,6 +15,10 @@
 /prototypes/**/dist/
 /prototypes/**/installer-dist/
 /prototypes/**/*.spec
+GuideOS/node/desktop/build/
+GuideOS/node/desktop/dist/
+GuideOS/node/desktop/*.spec
+/.private-cartridges/
 __pycache__/
 *.pyc
 
