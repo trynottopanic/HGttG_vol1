@@ -70,6 +70,67 @@ Passing a build is evidence about source consistency, not proof that these
 physical functions work. Results will be recorded after the first controlled
 boot.
 
+## Bluetooth-audio preparation — 2026-09-06
+
+The first Bluetooth target is deliberately narrow: one user-confirmed A2DP
+earbud using the mandatory SBC codec. The reproducible DDR3, DDR4, and private
+compatibility-root configurations now select BlueZ, BlueALSA, D-Bus, ALSA
+plugins and utilities, and SBC. The Buildroot configuration step accepted the
+complete dependency set; a physical audio result has not yet been claimed.
+
+The known-working vendor kernel reports UART1 as `/dev/ttyS1` and includes
+Bluetooth Classic, Bluetooth LE, RFCOMM, HIDP, H4, and H5 support. It does not
+provide the newer in-kernel Realtek UART helper, so the private compatibility
+path may require the RTL8821CS-specific Realtek H5 attachment program and the
+matching firmware/configuration. That operation shares a combination radio
+with the working Wi-Fi link and must not be guessed.
+
+`apps/bluetooth/guide-bluetooth-probe` is therefore the next live test. It
+only reports the UART candidate, HCI and rfkill state, loaded modules, expected
+firmware files, and bounded relevant kernel messages. It does not power-cycle
+the radio, attach the UART, scan, pair, or modify storage. Its output will
+determine the exact initialization package before any write-capable Bluetooth
+test is attempted.
+
+That read-only probe ran successfully over Developer Link. It confirmed Linux
+4.9.170, `/dev/ttyS1`, the loaded `8821cs` Wi-Fi module, and a `sunxi-bt`
+Bluetooth rfkill device at `/soc@03000000/bt`. The Bluetooth switch was soft
+blocked, no `hci0` existed, and no RTL8821C/CS Bluetooth firmware or user-space
+Bluetooth tools were present. Kernel messages independently confirmed H4, LL,
+and H5 registration plus the Wi-Fi driver's RTL8821CS coexistence support.
+
+This is a clean pre-initialization state, not a failed earbud test. The next
+package must provide the correct Realtek firmware/configuration and UART
+attachment program before BlueZ, BlueALSA, discovery, or pairing can be tested.
+The Bluetooth power switch will remain untouched until that package is ready
+so a failed partial initialization cannot strand the Wi-Fi Developer Link.
+
+### Live Bluetooth bring-up — 2026-09-06
+
+The first bounded live bring-up succeeded without interrupting Wi-Fi:
+
+- `sunxi-bt` was enabled through its existing Bluetooth rfkill device.
+- The Realtek H5 handshake completed over `/dev/ttyS1`.
+- The controller identified itself as `RTL8821CS` with HCI revision `0x000c`.
+- The checked 29-byte H5 configuration enabled UART flow control.
+- Firmware loaded successfully and reported coexistence build
+  `BTCOEX_20220309-5b5b`.
+- The kernel created `hci0` and BlueZ 5.79 powered it on successfully.
+- BlueALSA 4.3.1 registered an A2DP-source endpoint with the SBC codec.
+- `wlan0` retained its address and the Developer Link remained usable.
+
+The runtime is isolated at `/opt/guide/bluetooth` on the prototype. Pairing and
+actual earbud playback remain physical acceptance tests; discovery has not yet
+been started.
+
+The bounded discovery test subsequently found `soundcore P20i`. The Deck
+created and retained a BR/EDR bond, marked that device trusted, connected its
+Audio Sink service, and exposed a BlueALSA A2DP-source PCM using SBC at 48 kHz,
+16-bit stereo. A one-second 440 Hz PCM tone was transmitted at BlueALSA volume
+25/127 while Wi-Fi remained connected. Human confirmation that the tone was
+audible was received immediately afterward. This completes the first physical
+end-to-end Bluetooth audio proof.
+
 ## Physical bring-up record — 2026-09-04
 
 The LPDDR4 candidate was written to the 62,239,277,056-byte test microSD card

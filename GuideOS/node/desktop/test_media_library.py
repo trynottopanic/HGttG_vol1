@@ -6,7 +6,7 @@ import tempfile
 import threading
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, patch
 import urllib.error
 import urllib.request
 
@@ -17,7 +17,7 @@ from guide_node_server import (
     MEDIA_STREAM_TIMEOUT_SECONDS,
     parse_byte_range,
 )
-from media_library import MediaLibrary
+from media_library import MediaLibrary, MediaRecord
 from media_preparer import DeckMediaPreparer
 
 
@@ -57,6 +57,30 @@ class MediaLibraryTests(unittest.TestCase):
         restored.set_folder(None)
         self.assertIsNone(restored.folder)
 
+    def test_multiple_folders_preserve_library_and_directory_structure(self) -> None:
+        second = self.root / "Other" / "Media"
+        (second / "Shows" / "Season 1").mkdir(parents=True)
+        (second / "Shows" / "Season 1" / "episode.mkv").write_bytes(b"episode")
+        self.assertEqual(self.library.set_folders((self.media, second)), 3)
+        listing = self.library.listing()
+        episode = next(item for item in listing if item["name"] == "episode.mkv")
+        self.assertEqual(episode["library"], "Media (2)")
+        self.assertEqual(episode["folder"], "Shows/Season 1")
+        self.assertEqual(self.library.folders, (self.media.resolve(), second.resolve()))
+        restored = MediaLibrary(self.library.config_path)
+        self.assertEqual(restored.folders, self.library.folders)
+
+    def test_old_single_folder_setting_is_migrated(self) -> None:
+        self.library.config_path.parent.mkdir(parents=True)
+        self.library.config_path.write_text(
+            json.dumps({"media_folder": str(self.media)}), encoding="utf-8")
+        restored = MediaLibrary(self.library.config_path)
+        self.assertEqual(restored.folders, (self.media.resolve(),))
+        restored.add_folder(self.root / "settings")
+        saved = json.loads(self.library.config_path.read_text(encoding="utf-8"))
+        self.assertNotIn("media_folder", saved)
+        self.assertEqual(len(saved["media_folders"]), 2)
+
 
 class ByteRangeTests(unittest.TestCase):
     def test_common_ranges(self) -> None:
@@ -90,6 +114,106 @@ class ByteRangeTests(unittest.TestCase):
 
 
 class MediaPreparationTests(unittest.TestCase):
+    def test_selected_text_subtitle_is_extracted_to_small_cached_sidecar(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            cache = root / "cache"
+            cache.mkdir()
+            video = cache / "prepared.mp4"
+            video.write_bytes(b"prepared-video" * 100)
+            record = MediaRecord("a" * 32, root / "source.mkv", "Episode.mkv",
+                                 "Episode.mkv", "video", "video/x-matroska",
+                                 14, 1)
+            preparer = DeckMediaPreparer(cache)
+            preparer._states[record.media_id] = ("ready", "")
+            preparer._outputs[record.media_id] = video
+            preparer._subtitles[record.media_id] = ("English",)
+
+            def extract(arguments, **kwargs):
+                del kwargs
+                Path(arguments[-1]).write_text("1\n00:00:01,000 --> 00:00:02,000\nHello\n",
+                                               encoding="utf-8")
+                return SimpleNamespace(returncode=0)
+
+            try:
+                with patch("media_preparer._winget_program", return_value="ffmpeg.exe"), \
+                     patch("media_preparer.subprocess.run", side_effect=extract) as run:
+                    subtitle = preparer.subtitle(record, 0)
+                self.assertIsNotNone(subtitle)
+                self.assertEqual(subtitle.kind if subtitle else "", "subtitle")
+                self.assertEqual(subtitle.content_type if subtitle else "",
+                                 "application/x-subrip")
+                self.assertTrue(subtitle.path.name.endswith(".subtitle-0.srt") if subtitle else False)
+                self.assertIn("0:s:0", run.call_args.args[0])
+            finally:
+                preparer.close()
+
+    def test_ffmpeg_conversion_is_bounded_and_lower_priority_on_windows(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            preparer = DeckMediaPreparer(root / "cache")
+            process = Mock()
+            process.communicate.return_value = ("", "")
+            process.returncode = 0
+            try:
+                with patch("media_preparer._winget_program", return_value="ffmpeg.exe"), \
+                     patch("media_preparer._hardware_encoders", return_value=()), \
+                     patch.object(preparer, "_probe", return_value=None), \
+                     patch("media_preparer.sys.platform", "win32"), \
+                     patch("media_preparer.subprocess.Popen", return_value=process) as launch:
+                    okay, detail = preparer._convert(root / "source.mkv", root / "output.mp4")
+                self.assertTrue(okay, detail)
+                arguments = launch.call_args.args[0]
+                expected_threads = str(min(8, max(2, (__import__("os").cpu_count() or 4) // 2)))
+                self.assertEqual(arguments[arguments.index("-threads") + 1], expected_threads)
+                self.assertEqual(arguments[arguments.index("-filter_threads") + 1], "2")
+                flags = launch.call_args.kwargs["creationflags"]
+                self.assertTrue(flags & getattr(__import__("subprocess"),
+                                                    "BELOW_NORMAL_PRIORITY_CLASS", 0x00004000))
+            finally:
+                preparer.close()
+
+    def test_amd_hardware_path_uses_compatible_nv12_frames(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            preparer = DeckMediaPreparer(Path(folder) / "cache")
+            try:
+                arguments = preparer._ffmpeg_arguments(
+                    "ffmpeg.exe", Path(folder) / "source.mkv",
+                    Path(folder) / "output.mp4", None, False, encoder="h264_amf")
+                self.assertEqual(arguments[arguments.index("-c:v") + 1], "h264_amf")
+                self.assertIn("format=nv12", arguments[arguments.index("-vf") + 1])
+                self.assertIn("speed", arguments)
+            finally:
+                preparer.close()
+
+    def test_converter_retries_without_subtitles_and_reports_real_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            preparer = DeckMediaPreparer(root / "cache")
+            probe = {"streams": [
+                {"index": 0, "codec_type": "video", "codec_name": "h264",
+                 "disposition": {"attached_pic": 0}},
+                {"index": 1, "codec_type": "audio", "codec_name": "flac"},
+                {"index": 2, "codec_type": "subtitle", "codec_name": "subrip"},
+                {"index": 3, "codec_type": "subtitle", "codec_name": "hdmv_pgs_subtitle"},
+            ]}
+            try:
+                with patch("media_preparer._winget_program", return_value="ffmpeg.exe"), \
+                     patch("media_preparer._hardware_encoders", return_value=()), \
+                     patch.object(preparer, "_probe", return_value=probe), \
+                     patch.object(preparer, "_run_converter",
+                                  side_effect=[(False, "bad subtitle timing"), (True, "")]) as run:
+                    okay, detail = preparer._convert(root / "source.mkv", root / "output.mp4")
+                self.assertTrue(okay, detail)
+                self.assertEqual(run.call_count, 2)
+                first, second = run.call_args_list[0].args[0], run.call_args_list[1].args[0]
+                self.assertIn("0:2", first)
+                self.assertNotIn("0:3", first)
+                self.assertNotIn("0:2", second)
+                self.assertIn("ignore_err", second)
+            finally:
+                preparer.close()
+
     def test_video_is_hidden_until_cached_deck_copy_is_ready(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -195,6 +319,21 @@ class MediaHTTPTests(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as revoked:
             self.request(path, authorized=False)
         self.assertEqual(revoked.exception.code, 404)
+
+    def test_subtitle_ticket_serves_only_the_prepared_text_track(self) -> None:
+        with self.request("/guide/v1/media") as response:
+            media_id = json.loads(response.read())["items"][0]["id"]
+        subtitle_path = Path(self.temp.name) / "English.srt"
+        subtitle_path.write_bytes(b"small subtitle")
+        subtitle = SimpleNamespace(
+            size=subtitle_path.stat().st_size, path=subtitle_path,
+            content_type="application/x-subrip")
+        with patch.object(self.state, "playback_subtitle", return_value=subtitle):
+            with self.post(
+                    f"/guide/v1/media/{media_id}/subtitles/0/ticket") as response:
+                path = json.loads(response.read())["path"]
+            with self.request(path, authorized=False) as response:
+                self.assertEqual(response.read(), b"small subtitle")
 
 
 if __name__ == "__main__":

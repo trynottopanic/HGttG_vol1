@@ -1,0 +1,37 @@
+#!/bin/sh
+set -eu
+
+PACKAGE=/opt/guide/bluetooth
+RUNTIME="$PACKAGE/root"
+BIN="$RUNTIME/usr/bin"
+[ -d "$BIN/bin" ] && BIN="$BIN/bin"
+
+export LD_LIBRARY_PATH="$RUNTIME/lib:$RUNTIME/usr/lib:$RUNTIME/usr/lib/alsa-lib"
+export PATH="$BIN:$PATH"
+
+# Repair/start the bounded local audio stack first. This is idempotent and also
+# clears a stale D-Bus socket left by an interrupted prior boot.
+"$PACKAGE/guide-bluetooth-start" >/run/guide-bluetooth/reconnect.log 2>&1
+
+found=0
+"$BIN/bluetoothctl" devices Trusted 2>/dev/null |
+while read -r word address remainder; do
+    [ "$word" = "Device" ] || continue
+    found=1
+    "$BIN/bluetoothctl" connect "$address" >/dev/null 2>&1 || true
+done
+
+# The loop may run in a subshell, so verify the observable result rather than
+# trusting a shell variable.
+count=0
+while [ "$count" -lt 12 ]; do
+    if "$PACKAGE/guide-bluetooth-status" 2>/dev/null | grep -q '^CONNECTED=YES$'; then
+        "$PACKAGE/guide-bluetooth-status"
+        exit 0
+    fi
+    count=$((count + 1))
+    sleep 1
+done
+
+echo "No trusted Bluetooth audio device connected." >&2
+exit 1

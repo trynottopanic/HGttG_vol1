@@ -1,0 +1,45 @@
+#!/bin/sh
+set -u
+
+PACKAGE=/opt/guide/bluetooth
+RUNTIME="$PACKAGE/root"
+BIN="$RUNTIME/usr/bin"
+[ -d "$BIN/bin" ] && BIN="$BIN/bin"
+
+export LD_LIBRARY_PATH="$RUNTIME/lib:$RUNTIME/usr/lib:$RUNTIME/usr/lib/alsa-lib"
+
+dbus_alive=0
+if [ -r /run/guide-dbus.pid ]; then
+    dbus_pid=$(cat /run/guide-dbus.pid 2>/dev/null || true)
+    case "$dbus_pid" in
+        ''|*[!0-9]*) ;;
+        *) kill -0 "$dbus_pid" 2>/dev/null && dbus_alive=1;;
+    esac
+fi
+
+if [ ! -x "$BIN/bluealsa-cli" ] || [ "$dbus_alive" -ne 1 ] ||
+   [ ! -S /run/dbus/system_bus_socket ]; then
+    echo "READY=NO"
+    echo "CONNECTED=NO"
+    exit 0
+fi
+
+pcm=$($BIN/bluealsa-cli list-pcms 2>/dev/null |
+    sed -n '/\/a2dpsrc\/sink$/{p;q}')
+if [ -z "$pcm" ]; then
+    echo "READY=YES"
+    echo "CONNECTED=NO"
+    exit 0
+fi
+
+address=$(printf '%s\n' "$pcm" |
+    sed -n 's#.*dev_\([0-9A-Fa-f_]\{17\}\)/.*#\1#p' | tr '_' ':')
+name=$($BIN/bluetoothctl info "$address" 2>/dev/null |
+    sed -n 's/^[[:space:]]*Name: /NAME=/p' | head -n 1)
+
+echo "READY=YES"
+echo "CONNECTED=YES"
+echo "PCM=$pcm"
+echo "ADDRESS=$address"
+[ -n "$name" ] && echo "$name"
+echo "ALSA=bluealsa:DEV=$address,PROFILE=a2dp"

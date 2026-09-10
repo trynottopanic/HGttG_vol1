@@ -7,6 +7,11 @@ Current status: **Stage 2 physical prototype bring-up.** The Deck now boots to
 the GuideOS shell, accepts controls, shuts down safely, and recognizes a
 read-only metadata payload in the external microSD slot.
 
+`FUTURE_FRAMEWORK_0.md` records the forward architecture for structured Guide
+Views, a richer Wikipedia reader, communications companions, remote application
+streaming, Android providers, and the creator-facing Recipe path. It is a design
+direction rather than a frozen protocol.
+
 ## Human-accessibility requirement
 
 GuideOS treats making software as an ordinary use of the Deck. A person who is
@@ -67,6 +72,17 @@ MP4 derivative. Audio remains direct; video appears in the Deck catalogue only
 after its compatible copy is complete. Stopping folder sharing cancels an
 active preparation, and a source-file change invalidates the old derivative.
 
+`LOCAL_MEDIA_PLAYER_0.md` extends the same bounded player to media stored on the
+Deck or a read-only external cartridge. The unified Media browser preserves
+folders, works without Wi-Fi, recognizes matching sidecar subtitles, rechecks
+each local file before opening it, and privately remembers unfinished playback.
+
+An authorized Developer Link session can run `guide-diagnostics` for a bounded,
+redacted hardware and service snapshot. Human-readable and JSON forms correlate
+the last player stage with display, input, storage, radio, audio, decoder,
+resource, process, and recent-log evidence without exposing credentials or
+private media paths.
+
 Trusted-companion pairing is reciprocal and revocable. The Node owner arms one
 trust request in the Windows interface, then the paired Deck owner accepts it
 with `X`; both devices retain a random reconnect credential and stable local
@@ -83,6 +99,12 @@ requirement imposed on every Deck. `ANDROID_APPLICATION_PROVIDER_0.md` defines
 Guide-native adaptation, future on-Deck execution, and the first practical
 Node-hosted emulation route. The current Node can report installed Android
 tools but cannot start or control them.
+
+The first phone-side project lives under `android/guide-companion`.
+`ANDROID_COMPANION_0.md` defines its first narrow capability: with explicit
+notification access, it converts new Discord notification cards into bounded
+Guide events. Build 0.1 keeps delivery closed until authenticated, revocable
+Deck pairing is connected, so nothing captured can leave the phone yet.
 
 The first hardware target is the Anbernic RG35XX H. The first functional
 milestone is `CONTINUE-ON-DECK-0`: pause an authorized local video on a desktop
@@ -147,6 +169,8 @@ The first image will use:
 Disk 4 is the designated seed microSD card, currently observed through a
 Transcend TS-RDF5 reader at 57.96 GiB. It must not be written until an image has
 been built, inspected, hashed, and the physical target has been confirmed again.
+The current recovery-image boundary and required safe-capture procedure are
+recorded in `docs/ANBERNIC_FAILSAFE_STATUS.md`.
 
 ## Stages
 

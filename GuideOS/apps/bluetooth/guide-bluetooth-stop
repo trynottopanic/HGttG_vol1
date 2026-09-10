@@ -1,0 +1,33 @@
+#!/bin/sh
+set -u
+
+RUN=/run/guide-bluetooth
+
+for name in bluealsa bluetoothd radio; do
+    if [ -r "$RUN/$name.pid" ]; then
+        kill "$(cat "$RUN/$name.pid")" 2>/dev/null || true
+        rm -f "$RUN/$name.pid"
+    fi
+done
+
+if [ -r /run/guide-dbus.pid ]; then
+    kill "$(cat /run/guide-dbus.pid)" 2>/dev/null || true
+    rm -f /run/guide-dbus.pid
+fi
+
+rm -f /run/dbus/system_bus_socket
+rm -f "$RUN/audio-ready"
+
+for radio in /sys/class/rfkill/rfkill*; do
+    [ -r "$radio/type" ] || continue
+    type=$(cat "$radio/type" 2>/dev/null || true)
+    name=$(cat "$radio/name" 2>/dev/null || true)
+    case "$type:$name" in
+        bluetooth:*|*:sunxi-bt|*:Bluetooth)
+            [ -w "$radio/state" ] && printf 0 > "$radio/state"
+            break
+            ;;
+    esac
+done
+
+echo "Bluetooth stopped"

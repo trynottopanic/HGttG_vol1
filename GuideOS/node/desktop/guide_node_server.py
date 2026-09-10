@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import socket
+import subprocess
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -146,6 +147,25 @@ class GuideRequestHandler(BaseHTTPRequestHandler):
             self._send(200, {"capabilities": self.server.state.capabilities()})
         elif path == "/guide/v1/android/status":
             self._send(200, self.server.state.android.status())
+        elif path == "/guide/v1/applications":
+            applications = self.server.state.applications.profiles()
+            self._send(200, {"items": applications, "count": len(applications)})
+        elif path.startswith("/guide/v1/application-sessions/") and path.endswith("/stream"):
+            session_id = path.split("/")[-2]
+            client_id = self.server.state.session_client(self._token())[0]
+            command = self.server.state.applications.stream_command(session_id, client_id)
+            if command is None:
+                self._send(409, {"error": "application stream is not ready"})
+            else:
+                self._send_application_stream(command)
+        elif path.startswith("/guide/v1/application-sessions/"):
+            session_id = path.rsplit("/", 1)[-1]
+            client_id = self.server.state.session_client(self._token())[0]
+            session = self.server.state.applications.session(session_id, client_id)
+            if session is None:
+                self._send(404, {"error": "application session not found"})
+            else:
+                self._send(200, session)
         elif path == "/guide/v1/media":
             items = self.server.state.media_listing()
             query = parse_qs(urlsplit(self.path).query)
@@ -164,6 +184,38 @@ class GuideRequestHandler(BaseHTTPRequestHandler):
             self._send_media(path.rsplit("/", 1)[-1], send_body=True)
         else:
             self._send(404, {"error": "not found"})
+
+    def _send_application_stream(self, command: list[str]) -> None:
+        process = None
+        previous_timeout = self.connection.gettimeout()
+        try:
+            self.connection.settimeout(60)
+            process = subprocess.Popen(command, stdin=subprocess.DEVNULL,
+                                       stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            self.send_response(200)
+            self.send_header("Content-Type", "video/mp2t")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            if process.stdout is not None:
+                while True:
+                    block = process.stdout.read(64 * 1024)
+                    if not block:
+                        break
+                    self.wfile.write(block)
+        except (OSError, ConnectionError):
+            return
+        finally:
+            if process and process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+            try:
+                self.connection.settimeout(previous_timeout)
+            except OSError:
+                pass
 
     def do_HEAD(self) -> None:
         if not self._local_peer():
@@ -305,6 +357,16 @@ class GuideRequestHandler(BaseHTTPRequestHandler):
             client_id = self.server.state.session_identity(token)
             revoked = bool(client_id) and self.server.state.revoke_trust(client_id)
             self._send(200, {"trusted": False, "revoked": revoked})
+        elif re.fullmatch(r"/guide/v1/media/[0-9a-f]{32}/subtitles/[0-7]/ticket", path):
+            parts = path.split("/")
+            media_id, track = parts[-4], int(parts[-2])
+            issued = self.server.state.issue_media_ticket(self._token(), media_id, track)
+            if issued is None:
+                self._send(404, {"error": "subtitle unavailable or could not be prepared"})
+            else:
+                ticket, expiry = issued
+                self._send(200, {"path": "/guide/v1/play/" + ticket,
+                                 "expires_at": expiry})
         elif path.startswith("/guide/v1/media/") and path.endswith("/ticket"):
             parts = path.split("/")
             media_id = parts[-2] if len(parts) >= 2 else ""
@@ -317,6 +379,27 @@ class GuideRequestHandler(BaseHTTPRequestHandler):
                     "path": "/guide/v1/play/" + ticket,
                     "expires_at": expiry,
                 })
+        elif path.startswith("/guide/v1/applications/") and path.endswith("/sessions"):
+            request = self._read_json()
+            if request is None:
+                self._send(400, {"error": "invalid request"})
+                return
+            app_id = path.split("/")[-2]
+            client_id, client_name = self.server.state.session_client(self._token())
+            session = self.server.state.applications.request(app_id, client_id, client_name)
+            if session is None:
+                self._send(404, {"error": "application is unavailable"})
+            else:
+                self._send(202, session)
+        elif path.startswith("/guide/v1/application-sessions/") and path.endswith("/close"):
+            session_id = path.split("/")[-2]
+            client_id = self.server.state.session_client(self._token())[0]
+            closed = self.server.state.applications.close_session(session_id, client_id)
+            self._send(200 if closed else 404, {"closed": closed})
+        elif path.startswith("/guide/v1/application-sessions/") and path.endswith("/input"):
+            # Input injection is deliberately withheld until it has its own bounded,
+            # independently tested adapter. A session never grants desktop control.
+            self._send(501, {"error": "application input adapter is not installed"})
         else:
             self._send(404, {"error": "not found"})
 

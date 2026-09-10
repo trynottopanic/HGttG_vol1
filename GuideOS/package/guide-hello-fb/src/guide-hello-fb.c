@@ -11,10 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/mount.h>
 #include <sys/reboot.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
@@ -163,6 +165,7 @@ enum action {
     ACTION_OPEN,
     ACTION_BACK,
     ACTION_SPACE,
+    ACTION_DELETE,
     ACTION_POWER,
     ACTION_VOLUME_DOWN,
     ACTION_VOLUME_UP,
@@ -177,6 +180,7 @@ enum screen {
     SCREEN_WIFI_LIST,
     SCREEN_WIFI_KEYBOARD,
     SCREEN_WIFI_RESULT,
+    SCREEN_BLUETOOTH,
     SCREEN_NODE_LIST,
     SCREEN_NODE_PAIR,
     SCREEN_NODE_RESULT,
@@ -193,6 +197,8 @@ enum screen {
     SCREEN_WIKIPEDIA_RESULTS,
     SCREEN_WIKIPEDIA_ARTICLE,
     SCREEN_WIKIPEDIA_LINKS,
+    SCREEN_DOOM_LIST,
+    SCREEN_DOOM_PLAYING,
     SCREEN_DISPLAY,
     SCREEN_INPUT,
     SCREEN_SYSTEM,
@@ -216,8 +222,30 @@ struct wifi_ui {
 #define GUIDE_MEDIA_DIR "/usr/lib/guideos/media"
 #define GUIDE_AUDIO_CONTROL GUIDE_MEDIA_DIR "/bin/guide-audio-control"
 #define GUIDE_MEDIA_LOADER GUIDE_MEDIA_DIR "/lib/ld-linux-aarch64.so.1"
+#define GUIDE_BLUETOOTH_START "/opt/guide/bluetooth/guide-bluetooth-start"
+#define GUIDE_BLUETOOTH_STOP "/opt/guide/bluetooth/guide-bluetooth-stop"
+#define GUIDE_BLUETOOTH_STATUS "/opt/guide/bluetooth/guide-bluetooth-status"
+#define GUIDE_BLUETOOTH_RECONNECT "/opt/guide/bluetooth/guide-bluetooth-reconnect"
+#define GUIDE_AUDIO_ROUTE "/opt/guide/bluetooth/guide-audio-route"
+#define GUIDE_MEDIA_OWNER_FILE "/run/guideos-media-player.owner"
+#define GUIDE_DOOM_BINARY "/usr/bin/guide-doom"
+#define GUIDE_DOOM_MAX 32
 
 static int guide_volume_percent = -1;
+static void bluetooth_start_async(FILE *log);
+static void bluetooth_stop(FILE *log);
+static int bluetooth_status(char *name, size_t capacity, int *ready);
+static int bluetooth_reconnect(FILE *log);
+
+struct doom_item { char name[81]; char path[513]; };
+struct doom_ui {
+    struct doom_item items[GUIDE_DOOM_MAX];
+    unsigned count;
+    unsigned selected;
+    pid_t pid;
+    char message[96];
+};
+static struct doom_ui guide_doom;
 
 struct node_candidate {
     char name[65];
@@ -227,9 +255,19 @@ struct node_candidate {
 struct media_item {
     char name[121];
     char kind[6];
+    char library[49];
+    char folder[161];
+    unsigned source_index;
+    int local;
     unsigned long long size;
     unsigned subtitle_count;
     char subtitles[GUIDE_SUBTITLE_MAX][33];
+};
+
+struct media_view_item {
+    char name[121];
+    unsigned media_index;
+    int is_folder;
 };
 
 struct node_ui {
@@ -246,6 +284,11 @@ struct node_ui {
     unsigned media_count;
     unsigned media_total;
     unsigned media_selected;
+    struct media_view_item media_view[GUIDE_MEDIA_MAX];
+    unsigned media_view_count;
+    unsigned media_view_selected;
+    char media_library[49];
+    char media_folder[161];
     pid_t playback_pid;
     int playback_paused;
     unsigned subtitle_menu_selected;
@@ -653,11 +696,12 @@ static void draw_scrollbar(struct framebuffer *fb, unsigned x, unsigned y,
 
 static void draw_menu(struct framebuffer *fb, unsigned selected)
 {
-    static const char *items[] = {"Cartridges", "Wi-Fi", "Nodes", "Media", "Wikipedia",
-                                  "Developer Link", "Display Test", "Input Test", "System Info"};
+    static const char *items[] = {"Cartridges", "Wi-Fi", "Bluetooth Audio", "Nodes",
+                                  "Media", "Wikipedia", "Doom", "Developer Link",
+                                  "Display Test", "Input Test", "System Info"};
     unsigned row, first = selected > 2 ? selected - 2 : 0;
     char number[4];
-    if (first + 5 > 9) first = 4;
+    if (first + 5 > 11) first = 6;
     draw_header(fb, "Home");
     for (row = 0; row < 5; ++row) {
         unsigned index = first + row, y = 92 + row * 59;
@@ -672,9 +716,42 @@ static void draw_menu(struct framebuffer *fb, unsigned selected)
         draw_text(fb, 88, y, number, 2, ink);
         draw_text(fb, 132, y, items[index], 2, ink);
     }
-    draw_scrollbar(fb, 48, 82, 275, 9, first, 5);
+    draw_scrollbar(fb, 48, 82, 275, 11, first, 5);
     (void)draw_rgba_asset(fb, ROSE_PATH, ROSE_WIDTH, ROSE_HEIGHT, 380, 96, stderr);
     draw_footer_three(fb, "+ Move", "(A) Open", "(B) Back"); present(fb);
+}
+
+static void draw_doom_list(struct framebuffer *fb)
+{
+    unsigned first, row;
+    draw_header(fb, "DOOM");
+    if (!guide_doom.count) {
+        draw_centered(fb, 145, "RUNTIME READY", 4, color(fb, 245, 177, 52));
+        draw_centered(fb, 215, "NO DOOM GAME DATA FOUND", 3, color(fb, 244, 241, 228));
+        draw_centered(fb, 265, "ADD A LAWFUL WAD TO GUIDE/GAMES/DOOM", 2,
+                      color(fb, 151, 220, 231));
+        if (guide_doom.message[0])
+            draw_centered(fb, 315, guide_doom.message, 2, color(fb, 220, 73, 73));
+        draw_footer(fb, "ENGINE ONLY - GAME DATA SEPARATE", "B BACK"); present(fb); return;
+    }
+    first = guide_doom.selected > 2 ? guide_doom.selected - 2 : 0;
+    if (first + 5 > guide_doom.count)
+        first = guide_doom.count > 5 ? guide_doom.count - 5 : 0;
+    for (row = 0; row < 5 && first + row < guide_doom.count; ++row) {
+        unsigned index = first + row, y = 92 + row * 59;
+        uint32_t ink = color(fb, 244, 241, 228);
+        if (index == guide_doom.selected) {
+            fill_rect(fb, 71, y - 10, 500, 42, color(fb, 30, 27, 19));
+            fill_rect(fb, 71, y - 10, 4, 42, color(fb, 245, 177, 52));
+            ink = color(fb, 245, 177, 52);
+        }
+        draw_rect(fb, 71, y - 10, 500, 42, color(fb, 42, 74, 82));
+        draw_text(fb, 88, y, guide_doom.items[index].name, 2, ink);
+    }
+    draw_scrollbar(fb, 48, 82, 275, guide_doom.count, first, 5);
+    if (guide_doom.message[0])
+        draw_centered(fb, 390, guide_doom.message, 2, color(fb, 151, 220, 231));
+    draw_footer_three(fb, "+ MOVE", "A PLAY", "B BACK"); present(fb);
 }
 
 static void draw_display_test(struct framebuffer *fb)
@@ -826,7 +903,7 @@ static void draw_wifi_keyboard(struct framebuffer *fb, const struct wifi_ui *wif
     draw_centered(fb, 103, count, 2, color(fb, 244, 241, 228));
     draw_centered(fb, 132, masked, 2, color(fb, 245, 177, 52));
     draw_keyboard_keys(fb, wifi->page, wifi->cursor, "JOIN");
-    draw_footer(fb, "D-PAD  A SELECT  X SPACE", "B CANCEL"); present(fb);
+    draw_footer(fb, "A SELECT  X SPACE  Y DELETE", "B CANCEL"); present(fb);
 }
 
 static void draw_wifi_result(struct framebuffer *fb, const struct wifi_ui *wifi)
@@ -837,6 +914,29 @@ static void draw_wifi_result(struct framebuffer *fb, const struct wifi_ui *wifi)
                         wifi->success ? 72 : 73));
     draw_centered(fb, 250, wifi->result, 2, color(fb, 244, 241, 228));
     draw_footer(fb, "PASSWORD NOT LOGGED", "B BACK"); present(fb);
+}
+
+static void draw_bluetooth(struct framebuffer *fb, const char *message)
+{
+    char name[64] = "", visible[64] = "";
+    int ready = 0, connected = bluetooth_status(name, sizeof(name), &ready);
+    draw_header(fb, "BLUETOOTH AUDIO");
+    if (connected) {
+        safe_uppercase(visible, sizeof(visible), name[0] ? name : "AUDIO DEVICE");
+        draw_centered(fb, 142, "CONNECTED", 5, color(fb, 104, 207, 72));
+        draw_centered(fb, 224, visible, 3, color(fb, 244, 241, 228));
+        draw_centered(fb, 292, "MEDIA AUDIO WILL USE THIS DEVICE", 2,
+                      color(fb, 151, 220, 231));
+    } else {
+        draw_centered(fb, 142, ready ? "NOT CONNECTED" : "RADIO NOT READY", 4,
+                      color(fb, 245, 177, 52));
+        draw_centered(fb, 224, message && message[0] ? message :
+                      "MAKE YOUR TRUSTED EARBUD AVAILABLE", 2,
+                      color(fb, 244, 241, 228));
+        draw_centered(fb, 292, "ONLY PREVIOUSLY TRUSTED DEVICES", 2,
+                      color(fb, 151, 220, 231));
+    }
+    draw_footer(fb, "A RECONNECT", "B BACK"); present(fb);
 }
 
 static void draw_node_list(struct framebuffer *fb, const struct node_ui *node)
@@ -908,7 +1008,7 @@ static void draw_node_pair(struct framebuffer *fb, const struct node_ui *node)
     }
     if (node->message[0])
         draw_centered(fb, 400, node->message, 2, color(fb, 220, 73, 73));
-    draw_footer(fb, "ENTER CODE SHOWN ON NODE", "B CANCEL"); present(fb);
+    draw_footer(fb, "A SELECT  Y DELETE", "B CANCEL"); present(fb);
 }
 
 static void draw_node_result(struct framebuffer *fb, const struct node_ui *node)
@@ -937,53 +1037,135 @@ static void draw_node_result(struct framebuffer *fb, const struct node_ui *node)
                       node->trusted ? "TRUSTED" : "", "B NODES"); present(fb);
 }
 
+static int media_view_compare(const void *left_value, const void *right_value)
+{
+    const struct media_view_item *left = left_value, *right = right_value;
+    if (left->is_folder != right->is_folder) return right->is_folder - left->is_folder;
+    return strcasecmp(left->name, right->name);
+}
+
+static int media_view_has_folder(const struct node_ui *node, const char *name)
+{
+    unsigned index;
+    for (index = 0; index < node->media_view_count; ++index)
+        if (node->media_view[index].is_folder &&
+            strcasecmp(node->media_view[index].name, name) == 0) return 1;
+    return 0;
+}
+
+static void node_media_build_view(struct node_ui *node)
+{
+    unsigned index;
+    size_t parent_length = strlen(node->media_folder);
+    node->media_view_count = 0;
+    node->media_view_selected = 0;
+    for (index = 0; index < node->media_count &&
+                    node->media_view_count < GUIDE_MEDIA_MAX; ++index) {
+        const struct media_item *item = &node->media[index];
+        struct media_view_item *view;
+        const char *remainder, *slash;
+        char child[121];
+        size_t length;
+        if (!node->media_library[0]) {
+            if (media_view_has_folder(node, item->library)) continue;
+            view = &node->media_view[node->media_view_count++];
+            snprintf(view->name, sizeof(view->name), "%s", item->library);
+            view->is_folder = 1;
+            continue;
+        }
+        if (strcmp(item->library, node->media_library) != 0) continue;
+        if (!parent_length) remainder = item->folder;
+        else if (strcmp(item->folder, node->media_folder) == 0) remainder = "";
+        else if (strncmp(item->folder, node->media_folder, parent_length) == 0 &&
+                 item->folder[parent_length] == '/') remainder = item->folder + parent_length + 1;
+        else continue;
+        if (*remainder) {
+            slash = strchr(remainder, '/');
+            length = slash ? (size_t)(slash - remainder) : strlen(remainder);
+            if (length >= sizeof(child)) length = sizeof(child) - 1;
+            memcpy(child, remainder, length); child[length] = '\0';
+            if (media_view_has_folder(node, child)) continue;
+            view = &node->media_view[node->media_view_count++];
+            snprintf(view->name, sizeof(view->name), "%s", child);
+            view->is_folder = 1;
+        } else {
+            view = &node->media_view[node->media_view_count++];
+            snprintf(view->name, sizeof(view->name), "%s", item->name);
+            view->media_index = index;
+            view->is_folder = 0;
+        }
+    }
+    qsort(node->media_view, node->media_view_count, sizeof(node->media_view[0]),
+          media_view_compare);
+}
+
 static void draw_media_list(struct framebuffer *fb, const struct node_ui *node)
 {
     unsigned first, row;
-    char summary[64];
-    draw_header(fb, "NODE MEDIA");
+    char summary[96];
+    draw_header(fb, "MEDIA");
     if (node->message[0])
         draw_centered(fb, 68, node->message, 2, color(fb, 245, 177, 52));
     else {
-        snprintf(summary, sizeof(summary), "%u OF %u FILES AVAILABLE",
-                 node->media_count, node->media_total);
+        if (node->media_library[0])
+            snprintf(summary, sizeof(summary), "%.40s%s%.48s", node->media_library,
+                     node->media_folder[0] ? " / " : "", node->media_folder);
+        else snprintf(summary, sizeof(summary), "%u FILES IN SHARED FOLDERS",
+                      node->media_total);
         draw_centered(fb, 68, summary, 2, color(fb, 151, 220, 231));
     }
     if (!node->media_count) {
-        draw_centered(fb, 170, "NO SHARED MEDIA", 4, color(fb, 245, 177, 52));
-        draw_centered(fb, 248, "CHOOSE A MEDIA FOLDER ON THE NODE", 2,
+        draw_centered(fb, 170, "NO MEDIA FOUND", 4, color(fb, 245, 177, 52));
+        draw_centered(fb, 248, "USE DECK STORAGE CARTRIDGE OR NODE", 2,
                       color(fb, 244, 241, 228));
         draw_footer(fb, "A REFRESH", "B HOME"); present(fb); return;
     }
-    first = node->media_selected > 5 ? node->media_selected - 5 : 0;
-    if (first + 6 > node->media_count)
-        first = node->media_count > 6 ? node->media_count - 6 : 0;
-    for (row = 0; row < 6 && first + row < node->media_count; ++row) {
+    first = node->media_view_selected > 5 ? node->media_view_selected - 5 : 0;
+    if (first + 6 > node->media_view_count)
+        first = node->media_view_count > 6 ? node->media_view_count - 6 : 0;
+    for (row = 0; row < 6 && first + row < node->media_view_count; ++row) {
         unsigned index = first + row, y = 93 + row * 49;
         char name[39], label[48];
-        safe_uppercase(name, sizeof(name), node->media[index].name);
-        snprintf(label, sizeof(label), "%s  %s", node->media[index].kind, name);
+        const struct media_view_item *view = &node->media_view[index];
+        safe_uppercase(name, sizeof(name), view->name);
+        snprintf(label, sizeof(label), "%s  %s",
+                 view->is_folder ? "DIR" : node->media[view->media_index].kind, name);
         safe_uppercase(label, sizeof(label), label);
-        if (index == node->media_selected) {
+        if (index == node->media_view_selected) {
             fill_rect(fb, 38, y - 9, fb->var.xres - 76, 38, color(fb, 30, 27, 19));
             draw_diamond(fb, 55, y + 7, 6, color(fb, 245, 177, 52));
             draw_text(fb, 75, y, label, 2, color(fb, 245, 177, 52));
         } else draw_text(fb, 75, y, label, 2, color(fb, 244, 241, 228));
         draw_rect(fb, 38, y - 9, fb->var.xres - 76, 38, color(fb, 42, 74, 82));
     }
-    draw_scrollbar(fb, 22, 84, 285, node->media_count, first, 6);
-    draw_footer(fb, "A PLAY", "B HOME"); present(fb);
+    draw_scrollbar(fb, 22, 84, 285, node->media_view_count, first, 6);
+    draw_footer(fb, "A OPEN", node->media_library[0] ? "B BACK" : "B HOME"); present(fb);
 }
 
 static void draw_media_starting(struct framebuffer *fb, const struct node_ui *node)
 {
     char name[49];
+    int audio = strcmp(node->media[node->media_selected].kind, "audio") == 0;
     safe_uppercase(name, sizeof(name), node->media[node->media_selected].name);
-    draw_header(fb, "NODE MEDIA");
-    draw_centered(fb, 142, "STARTING PLAYBACK", 4, color(fb, 245, 177, 52));
+    draw_header(fb, audio ? "MUSIC" : "VIDEO");
+    draw_centered(fb, 142,
+                  audio ? (node->playback_paused ? "PAUSED" : "NOW PLAYING") :
+                          "VIDEO PLAYBACK",
+                  4, color(fb, 245, 177, 52));
     draw_centered(fb, 224, name, 2, color(fb, 244, 241, 228));
-    draw_centered(fb, 292, "STREAMING FROM YOUR NODE", 2, color(fb, 151, 220, 231));
-    draw_footer_three(fb, "B PAUSE", "L2 R2 SEEK", "A STOP"); present(fb);
+    draw_centered(fb, 292, node->media[node->media_selected].local ?
+                                  "PLAYING LOCALLY ON THIS DECK" :
+                                  (audio ? "STREAMING FROM YOUR MUSIC LIBRARY" :
+                                           "STREAMING FROM YOUR NODE"),
+                  2, color(fb, 151, 220, 231));
+    if (!audio)
+        draw_centered(fb, 344, "POWER ALWAYS OPENS SAFE SHUTDOWN", 2,
+                      color(fb, 244, 241, 228));
+    if (audio)
+        draw_footer_three(fb, "B PLAY PAUSE", "L1 R1 TRACK", "A STOP");
+    else
+        draw_footer_three(fb, "B PLAY PAUSE", "L2 R2 SEEK", "A STOP");
+    present(fb);
 }
 
 static void draw_media_subtitles(struct framebuffer *fb, const struct node_ui *node)
@@ -1039,7 +1221,7 @@ static void draw_wikipedia_keyboard(struct framebuffer *fb, const struct wikiped
     draw_centered(fb, 78, count, 2, color(fb, 151, 220, 231));
     draw_centered(fb, 110, shown, 2, color(fb, 245, 177, 52));
     draw_keyboard_keys(fb, wiki->keyboard_page, wiki->cursor, "SEARCH");
-    draw_footer(fb, "D-PAD  A SELECT  X SPACE", "B CANCEL"); present(fb);
+    draw_footer(fb, "A SELECT  X SPACE  Y DELETE", "B CANCEL"); present(fb);
 }
 
 static void draw_wikipedia_results(struct framebuffer *fb, const struct wikipedia_ui *wiki)
@@ -1372,6 +1554,40 @@ static void draw_install_confirm(struct framebuffer *fb, const struct guide_cart
     present(fb);
 }
 
+static int wait_helper_bounded(pid_t child, int *status, unsigned timeout_ms,
+                               FILE *log, const char *label)
+{
+    const unsigned quantum_ms = 50;
+    unsigned count, attempts = (timeout_ms + quantum_ms - 1) / quantum_ms;
+    struct timespec pause = {0, quantum_ms * 1000000L};
+    if (child <= 0) return -1;
+    for (count = 0; count < attempts; ++count) {
+        pid_t ended = waitpid(child, status, WNOHANG);
+        if (ended == child) return 0;
+        if (ended < 0 && errno == ECHILD) return 0;
+        if (ended < 0 && errno != EINTR) return -1;
+        nanosleep(&pause, NULL);
+    }
+    (void)kill(-child, SIGTERM);
+    for (count = 0; count < 4; ++count) {
+        pid_t ended = waitpid(child, status, WNOHANG);
+        if (ended == child || (ended < 0 && errno == ECHILD)) break;
+        nanosleep(&pause, NULL);
+    }
+    if (count == 4) {
+        (void)kill(-child, SIGKILL);
+        (void)waitpid(child, status, WNOHANG);
+    }
+    if (log) {
+        fprintf(log, "helper timeout name=%s pid=%ld limit_ms=%u forced=%s\n",
+                label ? label : "unknown", (long)child, timeout_ms,
+                count == 4 ? "yes" : "no");
+        fflush(log);
+    }
+    errno = ETIMEDOUT;
+    return -1;
+}
+
 static int developer_link_control(const char *command, FILE *log)
 {
     pid_t child;
@@ -1379,11 +1595,15 @@ static int developer_link_control(const char *command, FILE *log)
     if (!guide_developer_link_installed()) return -1;
     child = fork();
     if (child == 0) {
+        (void)setpgid(0, 0);
         execl("/usr/sbin/guide-devlink-control", "guide-devlink-control", command,
               (char *)NULL);
         _exit(127);
     }
-    if (child < 0 || waitpid(child, &status, 0) < 0 || !WIFEXITED(status)) return -1;
+    if (child < 0) return -1;
+    (void)setpgid(child, child);
+    if (wait_helper_bounded(child, &status, 1500, log, "developer-link") != 0 ||
+        !WIFEXITED(status)) return -1;
     fprintf(log, "developer_link command=%s status=%d\n", command, WEXITSTATUS(status));
     fflush(log);
     return WEXITSTATUS(status) == 0 ? 0 : -1;
@@ -1449,6 +1669,55 @@ static void draw_shutdown_confirm(struct framebuffer *fb)
     present(fb);
 }
 
+static int media_owner_pid(void)
+{
+    char path[64], command[512], owner[32], *end = NULL;
+    long pid = -1;
+    int descriptor;
+    ssize_t count;
+    size_t index;
+    descriptor = open(GUIDE_MEDIA_OWNER_FILE, O_RDONLY | O_NOFOLLOW);
+    count = descriptor >= 0 ? read(descriptor, owner, sizeof(owner) - 1) : -1;
+    if (descriptor >= 0) close(descriptor);
+    if (count <= 0) return -1;
+    owner[count] = '\0';
+    errno = 0;
+    pid = strtol(owner, &end, 10);
+    if (errno != 0 || end == owner || (*end != '\0' && *end != '\n')) return -1;
+    if (pid <= 1 || pid >= 4194304) return -1;
+    (void)snprintf(path, sizeof(path), "/proc/%ld/cmdline", pid);
+    descriptor = open(path, O_RDONLY | O_NOFOLLOW);
+    count = descriptor >= 0 ? read(descriptor, command, sizeof(command) - 1) : -1;
+    if (descriptor >= 0) close(descriptor);
+    if (count <= 0) return -1;
+    command[count] = '\0';
+    for (index = 0; index < (size_t)count; ++index)
+        if (command[index] == '\0') command[index] = ' ';
+    return strstr(command, "guide_node_bridge.py") && strstr(command, "play") ?
+           (int)pid : -1;
+}
+
+static void signal_media_owner(pid_t pid, int signal_number)
+{
+    pid_t group = getpgid(pid);
+    if (group == pid) (void)kill(-pid, signal_number);
+    else (void)kill(pid, signal_number);
+}
+
+static void stop_any_media_owner(FILE *log)
+{
+    int pid = media_owner_pid(), count;
+    struct timespec pause = {0, 50000000};
+    if (pid <= 1) return;
+    signal_media_owner((pid_t)pid, SIGTERM);
+    for (count = 0; count < 10 && kill((pid_t)pid, 0) == 0; ++count)
+        nanosleep(&pause, NULL);
+    if (kill((pid_t)pid, 0) == 0) signal_media_owner((pid_t)pid, SIGKILL);
+    fprintf(log, "shutdown media-owner cleanup pid=%d forced=%s\n", pid,
+            count == 10 ? "yes" : "no");
+    fflush(log);
+}
+
 static void safe_shutdown(struct framebuffer *fb, FILE *log,
                           struct guide_cartridge_catalog *catalog)
 {
@@ -1464,8 +1733,12 @@ static void safe_shutdown(struct framebuffer *fb, FILE *log,
     present(fb);
 
     fprintf(log, "safe_shutdown requested\n");
+    stop_any_media_owner(log);
+    /* Make owner data durable before any removable service helper is invoked. */
+    sync();
     record_clock_floor(log);
     if (guide_developer_link_installed()) (void)developer_link_control("stop", log);
+    bluetooth_stop(log);
     (void)guide_wifi_disconnect(log, wifi_message, sizeof(wifi_message));
     guide_cartridge_release(catalog, log);
     sync();
@@ -1517,6 +1790,7 @@ static void redraw_screen(struct framebuffer *fb, enum screen screen,
     else if (screen == SCREEN_WIFI_LIST) draw_wifi_list(fb, wifi);
     else if (screen == SCREEN_WIFI_KEYBOARD) draw_wifi_keyboard(fb, wifi);
     else if (screen == SCREEN_WIFI_RESULT) draw_wifi_result(fb, wifi);
+    else if (screen == SCREEN_BLUETOOTH) draw_bluetooth(fb, "");
     else if (screen == SCREEN_NODE_LIST) draw_node_list(fb, node);
     else if (screen == SCREEN_NODE_PAIR) draw_node_pair(fb, node);
     else if (screen == SCREEN_NODE_RESULT) draw_node_result(fb, node);
@@ -1535,6 +1809,7 @@ static void redraw_screen(struct framebuffer *fb, enum screen screen,
     else if (screen == SCREEN_WIKIPEDIA_RESULTS) draw_wikipedia_results(fb, wiki);
     else if (screen == SCREEN_WIKIPEDIA_ARTICLE) draw_wikipedia_article(fb, wiki);
     else if (screen == SCREEN_WIKIPEDIA_LINKS) draw_wikipedia_links(fb, wiki);
+    else if (screen == SCREEN_DOOM_LIST) draw_doom_list(fb);
     else if (screen == SCREEN_DISPLAY) draw_display_test(fb);
     else if (screen == SCREEN_INPUT) draw_input_test(fb, 0, 0, 0);
     else if (screen == SCREEN_SYSTEM) draw_system_info(fb, input_count);
@@ -1769,15 +2044,20 @@ static int audio_control(const char *command, FILE *log)
     pid_t child;
     char output[128] = "";
     size_t used = 0;
-    if (access(GUIDE_AUDIO_CONTROL, X_OK) != 0 ||
-        access(GUIDE_MEDIA_LOADER, X_OK) != 0 || pipe(descriptors) != 0)
+    int routed = access(GUIDE_AUDIO_ROUTE, X_OK) == 0;
+    if ((!routed && (access(GUIDE_AUDIO_CONTROL, X_OK) != 0 ||
+                     access(GUIDE_MEDIA_LOADER, X_OK) != 0)) || pipe(descriptors) != 0)
         return -1;
     child = fork();
     if (child == 0) {
         (void)dup2(descriptors[1], STDOUT_FILENO);
         if (log) (void)dup2(fileno(log), STDERR_FILENO);
         close(descriptors[0]); close(descriptors[1]);
-        if (command)
+        if (routed && command)
+            execl(GUIDE_AUDIO_ROUTE, GUIDE_AUDIO_ROUTE, command, (char *)NULL);
+        else if (routed)
+            execl(GUIDE_AUDIO_ROUTE, GUIDE_AUDIO_ROUTE, (char *)NULL);
+        else if (command)
             execl(GUIDE_MEDIA_LOADER, GUIDE_MEDIA_LOADER, "--library-path",
                   GUIDE_MEDIA_DIR "/lib", GUIDE_AUDIO_CONTROL, command, (char *)NULL);
         else
@@ -1803,6 +2083,95 @@ static int audio_control(const char *command, FILE *log)
             WIFEXITED(status) ? WEXITSTATUS(status) : -1);
     fflush(log);
     return volume;
+}
+
+static void bluetooth_start_async(FILE *log)
+{
+    pid_t child;
+    if (access(GUIDE_BLUETOOTH_START, X_OK) != 0) return;
+    child = fork();
+    if (child == 0) {
+        if (log) {
+            (void)dup2(fileno(log), STDOUT_FILENO);
+            (void)dup2(fileno(log), STDERR_FILENO);
+        }
+        execl(GUIDE_BLUETOOTH_START, GUIDE_BLUETOOTH_START, (char *)NULL);
+        _exit(127);
+    }
+    if (child > 0) {
+        fprintf(log, "Bluetooth audio startup requested pid=%ld\n", (long)child);
+        fflush(log);
+    }
+}
+
+static void bluetooth_stop(FILE *log)
+{
+    pid_t child;
+    int status;
+    if (access(GUIDE_BLUETOOTH_STOP, X_OK) != 0) return;
+    child = fork();
+    if (child == 0) {
+        (void)setpgid(0, 0);
+        if (log) {
+            (void)dup2(fileno(log), STDOUT_FILENO);
+            (void)dup2(fileno(log), STDERR_FILENO);
+        }
+        execl(GUIDE_BLUETOOTH_STOP, GUIDE_BLUETOOTH_STOP, (char *)NULL);
+        _exit(127);
+    }
+    if (child > 0) {
+        (void)setpgid(child, child);
+        (void)wait_helper_bounded(child, &status, 1500, log, "bluetooth-stop");
+    }
+}
+
+static int bluetooth_status(char *name, size_t capacity, int *ready)
+{
+    FILE *stream;
+    char line[160];
+    int connected = 0, status;
+    if (name && capacity) name[0] = '\0';
+    if (ready) *ready = 0;
+    if (access(GUIDE_BLUETOOTH_STATUS, X_OK) != 0) return 0;
+    stream = popen(GUIDE_BLUETOOTH_STATUS, "r");
+    if (!stream) return 0;
+    while (fgets(line, sizeof(line), stream)) {
+        size_t length = strlen(line);
+        while (length && (line[length - 1] == '\n' || line[length - 1] == '\r'))
+            line[--length] = '\0';
+        if (strcmp(line, "READY=YES") == 0 && ready) *ready = 1;
+        else if (strcmp(line, "CONNECTED=YES") == 0) connected = 1;
+        else if (strncmp(line, "NAME=", 5) == 0 && name && capacity) {
+            size_t copy = strlen(line + 5);
+            if (copy >= capacity) copy = capacity - 1;
+            memcpy(name, line + 5, copy);
+            name[copy] = '\0';
+        }
+    }
+    status = pclose(stream);
+    return status != -1 && connected;
+}
+
+static int bluetooth_reconnect(FILE *log)
+{
+    pid_t child;
+    int status = 0;
+    if (access(GUIDE_BLUETOOTH_RECONNECT, X_OK) != 0) return -1;
+    child = fork();
+    if (child == 0) {
+        (void)setpgid(0, 0);
+        if (log) {
+            (void)dup2(fileno(log), STDOUT_FILENO);
+            (void)dup2(fileno(log), STDERR_FILENO);
+        }
+        execl(GUIDE_BLUETOOTH_RECONNECT, GUIDE_BLUETOOTH_RECONNECT, (char *)NULL);
+        _exit(127);
+    }
+    if (child < 0) return -1;
+    (void)setpgid(child, child);
+    if (wait_helper_bounded(child, &status, 8000, log, "bluetooth-reconnect") != 0)
+        return -1;
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
 }
 
 static int node_discover(struct node_ui *node, FILE *log)
@@ -1888,26 +2257,22 @@ static int node_trust(struct node_ui *node, FILE *log)
     return 0;
 }
 
-static int node_media_refresh(struct node_ui *node, FILE *log)
+static int media_parse_response(struct node_ui *node, char *output,
+                                const char *protocol, int local)
 {
-    char output[32768], *line, *save = NULL;
-    memset(node->media, 0, sizeof(node->media));
-    node->media_count = 0; node->media_total = 0; node->media_selected = 0;
-    node->message[0] = '\0';
-    if (node_command("media", NULL, NULL, output, sizeof(output), node, log) != 0)
-        return -1;
+    char *line, *save = NULL;
+    unsigned base = node->media_count, source_count = 0;
     line = strtok_r(output, "\n", &save);
-    if (!line || strcmp(line, "GUIDE-MEDIA-1") != 0) {
-        snprintf(node->message, sizeof(node->message), "UNRECOGNIZED MEDIA RESPONSE");
-        return -1;
-    }
+    if (!line || strcmp(line, protocol) != 0) return -1;
     while ((line = strtok_r(NULL, "\n", &save)) != NULL) {
         if (strncmp(line, "TOTAL=", 6) == 0) {
-            node->media_total = (unsigned)strtoul(line + 6, NULL, 10);
+            node->media_total += (unsigned)strtoul(line + 6, NULL, 10);
+        } else if (strcmp(line, "LIMITED=YES") == 0) {
+            snprintf(node->message, sizeof(node->message), "SHOWING THE FIRST MEDIA FILES");
         } else if (strncmp(line, "MEDIA=", 6) == 0 &&
                    node->media_count < GUIDE_MEDIA_MAX) {
-            char *kind, *size, *name;
-            unsigned index;
+            char *kind, *size, *library, *folder, *name;
+            unsigned index, destination;
             kind = strchr(line + 6, '\t');
             if (!kind) continue;
             *kind++ = '\0';
@@ -1916,14 +2281,31 @@ static int node_media_refresh(struct node_ui *node, FILE *log)
             *size++ = '\0';
             name = strchr(size, '\t');
             if (!name) continue;
+            *name++ = '\0'; library = name;
+            folder = strchr(library, '\t');
+            if (!folder) continue;
+            *folder++ = '\0';
+            name = strchr(folder, '\t');
+            if (!name) continue;
             *name++ = '\0';
             index = (unsigned)strtoul(line + 6, NULL, 10);
-            if (index != node->media_count ||
+            if (index != source_count ||
                 (strcmp(kind, "audio") != 0 && strcmp(kind, "video") != 0)) continue;
-            snprintf(node->media[index].kind, sizeof(node->media[index].kind), "%s", kind);
-            node->media[index].size = strtoull(size, NULL, 10);
-            snprintf(node->media[index].name, sizeof(node->media[index].name), "%s", name);
+            destination = node->media_count;
+            snprintf(node->media[destination].kind, sizeof(node->media[destination].kind),
+                     "%s", kind);
+            node->media[destination].size = strtoull(size, NULL, 10);
+            node->media[destination].source_index = index;
+            node->media[destination].local = local;
+            snprintf(node->media[destination].library,
+                     sizeof(node->media[destination].library),
+                     "%s", library[0] ? library : "Media");
+            snprintf(node->media[destination].folder,
+                     sizeof(node->media[destination].folder), "%s", folder);
+            snprintf(node->media[destination].name,
+                     sizeof(node->media[destination].name), "%s", name);
             ++node->media_count;
+            ++source_count;
         } else if (strncmp(line, "SUBTITLE=", 9) == 0) {
             char *track, *label;
             unsigned index, track_index;
@@ -1935,16 +2317,46 @@ static int node_media_refresh(struct node_ui *node, FILE *log)
             *label++ = '\0';
             index = (unsigned)strtoul(line + 9, NULL, 10);
             track_index = (unsigned)strtoul(track, NULL, 10);
-            if (index >= node->media_count || track_index >= GUIDE_SUBTITLE_MAX) continue;
-            snprintf(node->media[index].subtitles[track_index],
-                     sizeof(node->media[index].subtitles[track_index]), "%s", label);
-            if (node->media[index].subtitle_count <= track_index)
-                node->media[index].subtitle_count = track_index + 1;
+            if (base + index >= node->media_count || track_index >= GUIDE_SUBTITLE_MAX)
+                continue;
+            snprintf(node->media[base + index].subtitles[track_index],
+                     sizeof(node->media[base + index].subtitles[track_index]), "%s", label);
+            if (node->media[base + index].subtitle_count <= track_index)
+                node->media[base + index].subtitle_count = track_index + 1;
         }
     }
-    fprintf(log, "node media refresh count=%u total=%u\n",
-            node->media_count, node->media_total); fflush(log);
     return 0;
+}
+
+static int node_media_refresh(struct node_ui *node, FILE *log)
+{
+    char output[65536], saved_error[96] = "";
+    int local_ok = 0, node_ok = 0;
+    memset(node->media, 0, sizeof(node->media));
+    node->media_count = 0; node->media_total = 0; node->media_selected = 0;
+    node->media_library[0] = '\0'; node->media_folder[0] = '\0';
+    node->message[0] = '\0';
+    if (node_command("local-media", NULL, NULL, output, sizeof(output), node, log) == 0 &&
+        media_parse_response(node, output, "GUIDE-LOCAL-MEDIA-1", 1) == 0)
+        local_ok = 1;
+    else snprintf(saved_error, sizeof(saved_error), "%s", node->message);
+    node->message[0] = '\0';
+    if (guide_wifi_link_up() &&
+        node_command("media", NULL, NULL, output, sizeof(output), node, log) == 0 &&
+        media_parse_response(node, output, "GUIDE-MEDIA-2", 0) == 0)
+        node_ok = 1;
+    if (!node_ok && local_ok && node->message[0])
+        snprintf(node->message, sizeof(node->message), "LOCAL MEDIA READY; NODE UNAVAILABLE");
+    else if (!local_ok && !node_ok && saved_error[0] && !node->message[0])
+        snprintf(node->message, sizeof(node->message), "%s", saved_error);
+    if (node->media_total > node->media_count && !node->message[0])
+        snprintf(node->message, sizeof(node->message), "SHOWING THE FIRST %u FILES",
+                 node->media_count);
+    node_media_build_view(node);
+    fprintf(log, "media refresh count=%u total=%u local=%s node=%s\n",
+            node->media_count, node->media_total,
+            local_ok ? "yes" : "no", node_ok ? "yes" : "no"); fflush(log);
+    return local_ok || node_ok ? 0 : -1;
 }
 
 static int node_media_start(struct node_ui *node, FILE *log)
@@ -1953,10 +2365,13 @@ static int node_media_start(struct node_ui *node, FILE *log)
     pid_t child;
     int descriptor;
     if (node->media_selected >= node->media_count) return -1;
-    snprintf(index, sizeof(index), "%u", node->media_selected);
+    snprintf(index, sizeof(index), "%u", node->media[node->media_selected].source_index);
     child = fork();
     if (child == 0) {
         (void)setpgid(0, 0);
+        /* Decoding must never starve the PID 1 interface that owns navigation
+         * and safe power-off. */
+        (void)setpriority(PRIO_PROCESS, 0, 5);
         descriptor = open("/var/log/guide-media.log",
                           O_WRONLY | O_CREAT | O_APPEND | O_NOFOLLOW, 0600);
         if (descriptor >= 0) {
@@ -1968,7 +2383,8 @@ static int node_media_start(struct node_ui *node, FILE *log)
                      GUIDE_WIKI_APP_DIR "/runtime/python3.12/lib-dynload", 1);
         (void)setenv("LD_LIBRARY_PATH", GUIDE_WIKI_APP_DIR "/runtime/lib", 1);
         execl("/usr/bin/python3", "python3", GUIDE_NODE_APP_DIR "/guide_node_bridge.py",
-              "play", index, (char *)NULL);
+              node->media[node->media_selected].local ? "local-play" : "play",
+              index, (char *)NULL);
         _exit(127);
     }
     if (child < 0) {
@@ -1980,8 +2396,10 @@ static int node_media_start(struct node_ui *node, FILE *log)
     node->playback_paused = 0;
     node->subtitle_current = -1;
     node->subtitle_menu_selected = 0;
-    fprintf(log, "node media playback started pid=%ld index=%u name=%s\n",
-            (long)child, node->media_selected, node->media[node->media_selected].name);
+    fprintf(log, "media playback started pid=%ld source=%s index=%u name=%s\n",
+            (long)child, node->media[node->media_selected].local ? "local" : "node",
+            node->media[node->media_selected].source_index,
+            node->media[node->media_selected].name);
     fflush(log);
     return 0;
 }
@@ -1989,12 +2407,172 @@ static int node_media_start(struct node_ui *node, FILE *log)
 static void node_media_stop(struct node_ui *node, FILE *log)
 {
     if (node->playback_pid > 0) {
-        (void)kill(-node->playback_pid, SIGCONT);
-        (void)kill(-node->playback_pid, SIGTERM);
-        fprintf(log, "node media playback stop requested pid=%ld\n",
-                (long)node->playback_pid); fflush(log);
+        pid_t pid = node->playback_pid;
+        int status, count;
+        char control[96];
+        int descriptor;
+        struct timespec pause = {0, 50000000};
+        (void)kill(-pid, SIGCONT);
+        snprintf(control, sizeof(control), "/run/guideos-media-control-%ld", (long)pid);
+        descriptor = open(control, O_WRONLY | O_APPEND | O_NOFOLLOW);
+        if (descriptor >= 0) {
+            (void)write(descriptor, "stop\n", 5);
+            close(descriptor);
+        }
+        fprintf(log, "media playback graceful stop requested pid=%ld control=%s\n",
+                (long)pid, descriptor >= 0 ? "yes" : "no"); fflush(log);
+        for (count = 0; count < 12; ++count) {
+            pid_t ended = waitpid(pid, &status, WNOHANG);
+            if (ended == pid || (ended < 0 && errno == ECHILD)) break;
+            nanosleep(&pause, NULL);
+        }
+        if (count == 12) {
+            (void)kill(-pid, SIGTERM);
+            for (count = 0; count < 4; ++count) {
+                pid_t ended = waitpid(pid, &status, WNOHANG);
+                if (ended == pid || (ended < 0 && errno == ECHILD)) break;
+                nanosleep(&pause, NULL);
+            }
+            if (count == 4) {
+                (void)kill(-pid, SIGKILL);
+                (void)waitpid(pid, &status, WNOHANG);
+                fprintf(log, "media playback required forced stop pid=%ld\n", (long)pid);
+                fflush(log);
+            }
+        }
     }
+    node->playback_pid = 0;
     node->playback_paused = 0;
+}
+
+static int doom_compare(const void *left, const void *right)
+{
+    return strcasecmp(((const struct doom_item *)left)->name,
+                      ((const struct doom_item *)right)->name);
+}
+
+static void doom_scan_directory(const char *directory, FILE *log)
+{
+    DIR *opened = opendir(directory);
+    struct dirent *entry;
+    if (!opened) return;
+    while ((entry = readdir(opened)) && guide_doom.count < GUIDE_DOOM_MAX) {
+        const char *extension = strrchr(entry->d_name, '.');
+        struct stat info;
+        struct doom_item *item;
+        int length;
+        if (!extension || strcasecmp(extension, ".wad") != 0 ||
+            strlen(entry->d_name) > 240) continue;
+        item = &guide_doom.items[guide_doom.count];
+        length = snprintf(item->path, sizeof(item->path), "%s/%s", directory, entry->d_name);
+        if (length < 0 || (size_t)length >= sizeof(item->path) ||
+            lstat(item->path, &info) != 0 || !S_ISREG(info.st_mode) ||
+            info.st_size <= 0 || info.st_size > (off_t)(1024ULL * 1024ULL * 1024ULL)) continue;
+        snprintf(item->name, sizeof(item->name), "%.*s", 80, entry->d_name);
+        ++guide_doom.count;
+    }
+    closedir(opened);
+    fprintf(log, "doom scanned directory=%s total=%u\n", directory, guide_doom.count);
+}
+
+static void doom_scan(FILE *log)
+{
+    pid_t pid = guide_doom.pid;
+    memset(&guide_doom, 0, sizeof(guide_doom));
+    guide_doom.pid = pid;
+    doom_scan_directory("/data/guide-games/doom", log);
+    doom_scan_directory("/media/guide-card/GUIDE/GAMES/DOOM", log);
+    doom_scan_directory("/media/guide-card/Guide/Games/Doom", log);
+    qsort(guide_doom.items, guide_doom.count, sizeof(guide_doom.items[0]), doom_compare);
+    snprintf(guide_doom.message, sizeof(guide_doom.message),
+             guide_doom.count ? "%u GAME DATA FILE%s READY" : "RUNTIME INSTALLED",
+             guide_doom.count, guide_doom.count == 1 ? "" : "S");
+    fflush(log);
+}
+
+static int doom_start(FILE *log)
+{
+    pid_t child;
+    int descriptor;
+    if (guide_doom.selected >= guide_doom.count || access(GUIDE_DOOM_BINARY, X_OK) != 0)
+        return -1;
+    child = fork();
+    if (child == 0) {
+        (void)setpgid(0, 0);
+        (void)setpriority(PRIO_PROCESS, 0, 3);
+        descriptor = open("/var/log/guide-doom.log",
+                          O_WRONLY | O_CREAT | O_APPEND | O_NOFOLLOW, 0600);
+        if (descriptor >= 0) {
+            (void)dup2(descriptor, STDOUT_FILENO);
+            (void)dup2(descriptor, STDERR_FILENO);
+            if (descriptor > STDERR_FILENO) close(descriptor);
+        }
+        execl(GUIDE_DOOM_BINARY, "guide-doom", guide_doom.items[guide_doom.selected].path,
+              (char *)NULL);
+        _exit(127);
+    }
+    if (child < 0) return -1;
+    (void)setpgid(child, child);
+    guide_doom.pid = child;
+    fprintf(log, "doom started pid=%ld wad=%s\n", (long)child,
+            guide_doom.items[guide_doom.selected].path); fflush(log);
+    return 0;
+}
+
+static void doom_stop(FILE *log)
+{
+    int status = 0, count;
+    struct timespec pause = {0, 50000000};
+    pid_t pid = guide_doom.pid;
+    if (pid <= 0) return;
+    (void)kill(-pid, SIGTERM);
+    for (count = 0; count < 20; ++count) {
+        pid_t ended = waitpid(pid, &status, WNOHANG);
+        if (ended == pid || (ended < 0 && errno == ECHILD)) break;
+        nanosleep(&pause, NULL);
+    }
+    if (count == 20) {
+        (void)kill(-pid, SIGKILL);
+        (void)waitpid(pid, &status, 0);
+        fprintf(log, "doom required forced stop pid=%ld\n", (long)pid);
+    } else fprintf(log, "doom stopped pid=%ld status=%d\n", (long)pid, status);
+    guide_doom.pid = 0;
+    fflush(log);
+}
+
+static int node_media_find_audio(const struct node_ui *node, int direction, int wrap,
+                                 unsigned *selected)
+{
+    int index = (int)node->media_selected;
+    unsigned checked;
+    if (!node->media_count || !selected || (direction != -1 && direction != 1)) return 0;
+    for (checked = 0; checked < node->media_count; ++checked) {
+        index += direction;
+        if (index < 0) {
+            if (!wrap) return 0;
+            index = (int)node->media_count - 1;
+        } else if ((unsigned)index >= node->media_count) {
+            if (!wrap) return 0;
+            index = 0;
+        }
+        if (strcmp(node->media[index].kind, "audio") == 0) {
+            *selected = (unsigned)index;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int node_media_change_audio(struct framebuffer *fb, struct node_ui *node,
+                                   int direction, int wrap, FILE *log)
+{
+    unsigned selected;
+    if (!node_media_find_audio(node, direction, wrap, &selected)) return 0;
+    if (selected == node->media_selected) return 0;
+    node_media_stop(node, log);
+    node->media_selected = selected;
+    draw_media_starting(fb, node);
+    return node_media_start(node, log) == 0;
 }
 
 static int node_media_control(struct node_ui *node, const char *command, FILE *log)
@@ -2018,6 +2596,37 @@ static int node_media_control(struct node_ui *node, const char *command, FILE *l
     close(descriptor);
     fprintf(log, "media control pid=%ld command=%s\n", (long)node->playback_pid, command);
     fflush(log); return 0;
+}
+
+static int node_media_wait_control_state(const struct node_ui *node,
+                                         const char *wanted, FILE *log)
+{
+    char path[112], value[32];
+    struct timespec pause = {0, 20000000};
+    int attempt;
+    if (node->playback_pid <= 0 || !wanted) return -1;
+    snprintf(path, sizeof(path), "/run/guideos-media-control-%ld.state",
+             (long)node->playback_pid);
+    for (attempt = 0; attempt < 75; ++attempt) {
+        int descriptor = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+        if (descriptor >= 0) {
+            ssize_t count = read(descriptor, value, sizeof(value) - 1);
+            close(descriptor);
+            if (count > 0) {
+                value[count] = '\0';
+                if (strncmp(value, wanted, strlen(wanted)) == 0) {
+                    fprintf(log, "media control acknowledged state=%s wait_ms=%d\n",
+                            wanted, attempt * 20);
+                    fflush(log);
+                    return 0;
+                }
+            }
+        }
+        nanosleep(&pause, NULL);
+    }
+    fprintf(log, "media control acknowledgement timed out state=%s\n", wanted);
+    fflush(log);
+    return -1;
 }
 
 static unsigned node_keypad_move(unsigned key, int horizontal, int vertical)
@@ -2229,10 +2838,14 @@ static enum action classify_event(struct input_set *inputs, int source,
         if (event->code == KEY_ENTER || event->code == BTN_SOUTH) return ACTION_OPEN;
         if (event->code == KEY_ESC || event->code == BTN_EAST) return ACTION_BACK;
         if (event->code == BTN_NORTH) return ACTION_SPACE;
+        if (event->code == BTN_WEST) return ACTION_DELETE;
+        /* Keep standard Linux shoulder codes plus the remaining vendor
+         * aliases observed on the prototype. BTN_WEST is the physical Y
+         * button and is reserved for text deletion throughout GuideOS. */
         if (event->code == BTN_TL) return ACTION_L1;
-        if (event->code == BTN_TR) return ACTION_R1;
-        if (event->code == BTN_TL2) return ACTION_L2;
-        if (event->code == BTN_TR2) return ACTION_R2;
+        if (event->code == BTN_TR || event->code == BTN_Z) return ACTION_R1;
+        if (event->code == BTN_TL2 || event->code == BTN_SELECT) return ACTION_L2;
+        if (event->code == BTN_TR2 || event->code == BTN_START) return ACTION_R2;
         return ACTION_OTHER;
     }
     if (event->type == EV_ABS && event->code == ABS_HAT0Y) {
@@ -2289,6 +2902,20 @@ static void run_shell(struct framebuffer *fb, FILE *log)
         int received = next_event(&inputs, &event, &source);
         if (!received) {
             int current_link = guide_wifi_link_up();
+            if (guide_doom.pid > 0) {
+                int doom_status = 0;
+                pid_t ended = waitpid(guide_doom.pid, &doom_status, WNOHANG);
+                if (ended == guide_doom.pid || (ended < 0 && errno == ECHILD)) {
+                    fprintf(log, "doom ended status=%d\n", doom_status); fflush(log);
+                    guide_doom.pid = 0;
+                    if (screen == SCREEN_DOOM_PLAYING) {
+                        snprintf(guide_doom.message, sizeof(guide_doom.message),
+                                 WIFEXITED(doom_status) && WEXITSTATUS(doom_status) == 0 ?
+                                 "GAME CLOSED SAFELY" : "GAME STOPPED - SEE DIAGNOSTICS");
+                        screen = SCREEN_DOOM_LIST; draw_doom_list(fb);
+                    }
+                }
+            }
             if (node.playback_pid > 0) {
                 int playback_status = 0;
                 pid_t ended = waitpid(node.playback_pid, &playback_status, WNOHANG);
@@ -2297,10 +2924,24 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                     fflush(log);
                     node.playback_pid = 0; node.playback_paused = 0;
                     if (screen == SCREEN_MEDIA_PLAYING || screen == SCREEN_MEDIA_SUBTITLES) {
-                        snprintf(node.message, sizeof(node.message),
-                                 WIFEXITED(playback_status) && WEXITSTATUS(playback_status) == 0 ?
-                                 "PLAYBACK COMPLETE" : "PLAYBACK STOPPED");
-                        screen = SCREEN_MEDIA_LIST; draw_media_list(fb, &node);
+                        int complete = WIFEXITED(playback_status) &&
+                                       WEXITSTATUS(playback_status) == 0;
+                        stop_stick_repeats(&inputs);
+                        if (complete &&
+                            strcmp(node.media[node.media_selected].kind, "audio") == 0 &&
+                            node_media_change_audio(fb, &node, 1, 0, log)) {
+                            screen = SCREEN_MEDIA_PLAYING;
+                        } else {
+                            if (complete)
+                                snprintf(node.message, sizeof(node.message), "PLAYBACK COMPLETE");
+                            else if (node.media[node.media_selected].local)
+                                snprintf(node.message, sizeof(node.message),
+                                         "FILE NEEDS NODE CONVERSION OR IS DAMAGED");
+                            else
+                                snprintf(node.message, sizeof(node.message),
+                                         "NODE PLAYBACK WAS INTERRUPTED");
+                            screen = SCREEN_MEDIA_LIST; draw_media_list(fb, &node);
+                        }
                     }
                 }
             }
@@ -2309,7 +2950,7 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                 monotonic_milliseconds() >= volume_indicator_until) {
                 volume_indicator_until = 0;
                 if (volume_indicator_paused_video && node.playback_pid > 0)
-                    (void)kill(-node.playback_pid, SIGCONT);
+                    (void)node_media_control(&node, "pause", log);
                 volume_indicator_paused_video = 0;
                 if (screen != SCREEN_MEDIA_PLAYING)
                     redraw_screen(fb, screen, selected, (unsigned)inputs.count,
@@ -2321,10 +2962,14 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                 link_state = current_link;
                 if (!current_link && guide_developer_link_installed())
                     (void)developer_link_control("stop", log);
-                if (!current_link && node.playback_pid > 0)
+                if (!current_link && node.playback_pid > 0 &&
+                    node.media_selected < node.media_count &&
+                    !node.media[node.media_selected].local)
                     node_media_stop(&node, log);
-                redraw_screen(fb, screen, selected, (unsigned)inputs.count,
-                              &catalog, install_message, install_success, &wifi, &node, &wiki);
+                if (screen != SCREEN_MEDIA_PLAYING && screen != SCREEN_MEDIA_SUBTITLES)
+                    redraw_screen(fb, screen, selected, (unsigned)inputs.count,
+                                  &catalog, install_message, install_success,
+                                  &wifi, &node, &wiki);
             }
             action = repeat_stick(&inputs);
             if (action == ACTION_NONE) continue;
@@ -2341,7 +2986,7 @@ static void run_shell(struct framebuffer *fb, FILE *log)
             action != ACTION_VOLUME_DOWN && action != ACTION_VOLUME_UP) {
             volume_indicator_until = 0;
             if (volume_indicator_paused_video && node.playback_pid > 0)
-                (void)kill(-node.playback_pid, SIGCONT);
+                (void)node_media_control(&node, "pause", log);
             volume_indicator_paused_video = 0;
         }
         if (action == ACTION_NONE) {
@@ -2357,30 +3002,42 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                 node.media_selected < node.media_count &&
                 strcmp(node.media[node.media_selected].kind, "video") == 0 &&
                 !node.playback_paused && !volume_indicator_paused_video &&
-                kill(-node.playback_pid, SIGSTOP) == 0)
+                node_media_control(&node, "pause", log) == 0)
                 volume_indicator_paused_video = 1;
             draw_volume_indicator(fb, guide_volume_percent);
             volume_indicator_until = monotonic_milliseconds() + 900;
         } else if (action == ACTION_POWER && screen != SCREEN_SHUTDOWN) {
-            if (node.playback_pid > 0) node_media_stop(&node, log);
-            previous_screen = screen;
+            stop_stick_repeats(&inputs);
+            previous_screen = screen == SCREEN_DOOM_PLAYING ? SCREEN_DOOM_LIST : screen;
             screen = SCREEN_SHUTDOWN;
             draw_shutdown_confirm(fb);
+            /* Acknowledge the power key before doing even bounded cleanup. */
+            if (node.playback_pid > 0) {
+                node_media_stop(&node, log);
+                /* The decoder may write one final framebuffer after the first
+                 * draw. Reassert the confirmation once ownership is gone. */
+                draw_shutdown_confirm(fb);
+            }
+            if (guide_doom.pid > 0) {
+                doom_stop(log);
+                draw_shutdown_confirm(fb);
+            }
         } else if (screen == SCREEN_SHUTDOWN) {
             if (action == ACTION_OPEN) safe_shutdown(fb, log, &catalog);
-            else if (action == ACTION_BACK || action == ACTION_POWER) {
+            else if (action == ACTION_BACK) {
                 screen = previous_screen;
                 redraw_screen(fb, screen, selected, (unsigned)inputs.count,
                               &catalog, install_message, install_success, &wifi, &node, &wiki);
             }
         } else if (screen == SCREEN_MENU) {
-            if (action == ACTION_UP) { selected = selected == 0 ? 8 : selected - 1; draw_menu(fb, selected); }
-            else if (action == ACTION_DOWN) { selected = (selected + 1) % 9; draw_menu(fb, selected); }
+            if (action == ACTION_UP) { selected = selected == 0 ? 10 : selected - 1; draw_menu(fb, selected); }
+            else if (action == ACTION_DOWN) { selected = (selected + 1) % 11; draw_menu(fb, selected); }
             else if (action == ACTION_OPEN) {
                 screen = selected == 0 ? SCREEN_CARTRIDGE_LIST : selected == 1 ? SCREEN_WIFI_LIST :
-                         selected == 2 ? SCREEN_NODE_LIST : selected == 3 ? SCREEN_MEDIA_LIST :
-                         selected == 4 ? SCREEN_WIKIPEDIA_HOME : selected == 5 ? SCREEN_DEVELOPER_LINK :
-                         selected == 6 ? SCREEN_DISPLAY : selected == 7 ? SCREEN_INPUT : SCREEN_SYSTEM;
+                         selected == 2 ? SCREEN_BLUETOOTH : selected == 3 ? SCREEN_NODE_LIST :
+                         selected == 4 ? SCREEN_MEDIA_LIST : selected == 5 ? SCREEN_WIKIPEDIA_HOME :
+                         selected == 6 ? SCREEN_DOOM_LIST : selected == 7 ? SCREEN_DEVELOPER_LINK :
+                         selected == 8 ? SCREEN_DISPLAY : selected == 9 ? SCREEN_INPUT : SCREEN_SYSTEM;
                 if (screen == SCREEN_CARTRIDGE_LIST) {
                     /* A held stick must not carry its repeat into a new menu. */
                     stop_stick_repeats(&inputs);
@@ -2388,6 +3045,8 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                     draw_cartridge_list(fb, &catalog);
                 } else if (screen == SCREEN_WIFI_LIST) {
                     wifi_scan_screen(fb, &wifi, log);
+                } else if (screen == SCREEN_BLUETOOTH) {
+                    draw_bluetooth(fb, "");
                 } else if (screen == SCREEN_NODE_LIST) {
                     stop_stick_repeats(&inputs);
                     draw_header(fb, "NODES");
@@ -2398,22 +3057,54 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                     draw_node_list(fb, &node);
                 } else if (screen == SCREEN_MEDIA_LIST) {
                     stop_stick_repeats(&inputs);
-                    draw_header(fb, "NODE MEDIA");
-                    draw_centered(fb, 190, guide_wifi_link_up() ? "READING MEDIA LIBRARY" :
-                                  "CONNECT WI-FI FIRST", 4, color(fb, 245, 177, 52));
+                    draw_header(fb, "MEDIA");
+                    draw_centered(fb, 190, "READING DECK CARTRIDGE AND NODE", 3,
+                                  color(fb, 245, 177, 52));
                     present(fb);
-                    if (guide_wifi_link_up()) (void)node_media_refresh(&node, log);
-                    else snprintf(node.message, sizeof(node.message), "CONNECT WI-FI FIRST");
+                    guide_cartridge_scan(&catalog, log);
+                    (void)node_media_refresh(&node, log);
                     draw_media_list(fb, &node);
                 } else if (screen == SCREEN_DEVELOPER_LINK) {
                     developer_message[0] = '\0';
                     draw_developer_link(fb, log, developer_message);
                 } else if (screen == SCREEN_WIKIPEDIA_HOME) {
                     wiki.message[0] = '\0'; draw_wikipedia_home(fb, &wiki);
+                } else if (screen == SCREEN_DOOM_LIST) {
+                    stop_stick_repeats(&inputs);
+                    guide_cartridge_scan(&catalog, log);
+                    doom_scan(log); draw_doom_list(fb);
                 } else if (screen == SCREEN_DISPLAY) draw_display_test(fb);
                 else if (screen == SCREEN_INPUT) draw_input_test(fb, 0, 0, 0);
                 else draw_system_info(fb, (unsigned)inputs.count);
             }
+        } else if (screen == SCREEN_DOOM_LIST &&
+                   (action == ACTION_UP || action == ACTION_LEFT)) {
+            if (guide_doom.count)
+                guide_doom.selected = guide_doom.selected == 0 ? guide_doom.count - 1 :
+                                      guide_doom.selected - 1;
+            draw_doom_list(fb);
+        } else if (screen == SCREEN_DOOM_LIST &&
+                   (action == ACTION_DOWN || action == ACTION_RIGHT)) {
+            if (guide_doom.count)
+                guide_doom.selected = (guide_doom.selected + 1) % guide_doom.count;
+            draw_doom_list(fb);
+        } else if (screen == SCREEN_DOOM_LIST && action == ACTION_OPEN) {
+            if (guide_doom.count && doom_start(log) == 0) {
+                screen = SCREEN_DOOM_PLAYING;
+            } else {
+                snprintf(guide_doom.message, sizeof(guide_doom.message),
+                         guide_doom.count ? "COULD NOT START - SEE DIAGNOSTICS" : "NO GAME DATA FOUND");
+                draw_doom_list(fb);
+            }
+        } else if (screen == SCREEN_BLUETOOTH && action == ACTION_OPEN) {
+            draw_header(fb, "BLUETOOTH AUDIO");
+            draw_centered(fb, 180, "RECONNECTING", 5, color(fb, 245, 177, 52));
+            draw_centered(fb, 270, "THIS MAY TAKE A FEW SECONDS", 2,
+                          color(fb, 151, 220, 231)); present(fb);
+            if (bluetooth_reconnect(log) == 0)
+                draw_bluetooth(fb, "CONNECTED");
+            else
+                draw_bluetooth(fb, "COULD NOT REACH A TRUSTED DEVICE");
         } else if (screen == SCREEN_NODE_LIST &&
                    (action == ACTION_UP || action == ACTION_DOWN ||
                     action == ACTION_LEFT || action == ACTION_RIGHT)) {
@@ -2450,6 +3141,9 @@ static void run_shell(struct framebuffer *fb, FILE *log)
             node.keypad = node_keypad_move(node.keypad, 0, -1); draw_node_pair(fb, &node);
         } else if (screen == SCREEN_NODE_PAIR && action == ACTION_DOWN) {
             node.keypad = node_keypad_move(node.keypad, 0, 1); draw_node_pair(fb, &node);
+        } else if (screen == SCREEN_NODE_PAIR && action == ACTION_DELETE) {
+            if (node.code_length) node.code[--node.code_length] = '\0';
+            draw_node_pair(fb, &node);
         } else if (screen == SCREEN_NODE_PAIR && action == ACTION_OPEN) {
             if (node_keypad_select(&node)) {
                 draw_header(fb, "NODE LINK");
@@ -2462,9 +3156,10 @@ static void run_shell(struct framebuffer *fb, FILE *log)
         } else if (screen == SCREEN_NODE_RESULT && action == ACTION_BACK) {
             screen = SCREEN_NODE_LIST; draw_node_list(fb, &node);
         } else if (screen == SCREEN_NODE_RESULT && action == ACTION_OPEN && node.success) {
-            draw_header(fb, "NODE MEDIA");
+            draw_header(fb, "MEDIA");
             draw_centered(fb, 190, "READING MEDIA LIBRARY", 4,
                           color(fb, 245, 177, 52)); present(fb);
+            guide_cartridge_scan(&catalog, log);
             (void)node_media_refresh(&node, log);
             screen = SCREEN_MEDIA_LIST; draw_media_list(fb, &node);
         } else if (screen == SCREEN_NODE_RESULT && action == ACTION_SPACE &&
@@ -2479,33 +3174,72 @@ static void run_shell(struct framebuffer *fb, FILE *log)
         } else if (screen == SCREEN_MEDIA_LIST &&
                    (action == ACTION_UP || action == ACTION_DOWN ||
                     action == ACTION_LEFT || action == ACTION_RIGHT)) {
-            if (node.media_count) {
+            if (node.media_view_count) {
                 if (action == ACTION_UP || action == ACTION_LEFT)
-                    node.media_selected = node.media_selected == 0 ?
-                                          node.media_count - 1 : node.media_selected - 1;
-                else node.media_selected = (node.media_selected + 1) % node.media_count;
+                    node.media_view_selected = node.media_view_selected == 0 ?
+                        node.media_view_count - 1 : node.media_view_selected - 1;
+                else node.media_view_selected =
+                    (node.media_view_selected + 1) % node.media_view_count;
             }
             draw_media_list(fb, &node);
         } else if (screen == SCREEN_MEDIA_LIST && action == ACTION_OPEN) {
             if (!node.media_count) {
+                guide_cartridge_scan(&catalog, log);
                 (void)node_media_refresh(&node, log); draw_media_list(fb, &node);
-            } else {
-                draw_media_starting(fb, &node);
-                if (node_media_start(&node, log) == 0) screen = SCREEN_MEDIA_PLAYING;
-                else draw_media_list(fb, &node);
+            } else if (node.media_view_count) {
+                const struct media_view_item *choice =
+                    &node.media_view[node.media_view_selected];
+                if (choice->is_folder) {
+                    if (!node.media_library[0])
+                        snprintf(node.media_library, sizeof(node.media_library), "%s",
+                                 choice->name);
+                    else if (!node.media_folder[0])
+                        snprintf(node.media_folder, sizeof(node.media_folder), "%s",
+                                 choice->name);
+                    else {
+                        size_t used = strlen(node.media_folder);
+                        snprintf(node.media_folder + used,
+                                 sizeof(node.media_folder) - used, "/%s", choice->name);
+                    }
+                    node_media_build_view(&node); draw_media_list(fb, &node);
+                } else {
+                    node.media_selected = choice->media_index;
+                    draw_media_starting(fb, &node);
+                    if (node_media_start(&node, log) == 0) screen = SCREEN_MEDIA_PLAYING;
+                    else draw_media_list(fb, &node);
+                }
             }
+        } else if (screen == SCREEN_MEDIA_LIST && action == ACTION_BACK &&
+                   node.media_library[0]) {
+            char *separator = strrchr(node.media_folder, '/');
+            if (separator) *separator = '\0';
+            else if (node.media_folder[0]) node.media_folder[0] = '\0';
+            else node.media_library[0] = '\0';
+            node_media_build_view(&node); draw_media_list(fb, &node);
         } else if (screen == SCREEN_MEDIA_PLAYING && action == ACTION_OPEN) {
             node_media_stop(&node, log);
+            stop_stick_repeats(&inputs);
+            snprintf(node.message, sizeof(node.message), "PLAYBACK STOPPED");
+            screen = SCREEN_MEDIA_LIST; draw_media_list(fb, &node);
         } else if (screen == SCREEN_MEDIA_PLAYING && action == ACTION_BACK &&
                    node.playback_pid > 0) {
             if (node_media_control(&node, "pause", log) == 0)
                 node.playback_paused = !node.playback_paused;
+            draw_media_starting(fb, &node);
         } else if (screen == SCREEN_MEDIA_PLAYING && action == ACTION_L1) {
-            (void)node_media_control(&node, "rate:-2", log);
-            node.playback_paused = 0;
+            if (strcmp(node.media[node.media_selected].kind, "audio") == 0)
+                (void)node_media_change_audio(fb, &node, -1, 1, log);
+            else {
+                (void)node_media_control(&node, "rate:-2", log);
+                node.playback_paused = 0;
+            }
         } else if (screen == SCREEN_MEDIA_PLAYING && action == ACTION_R1) {
-            (void)node_media_control(&node, "rate:2", log);
-            node.playback_paused = 0;
+            if (strcmp(node.media[node.media_selected].kind, "audio") == 0)
+                (void)node_media_change_audio(fb, &node, 1, 1, log);
+            else {
+                (void)node_media_control(&node, "rate:2", log);
+                node.playback_paused = 0;
+            }
         } else if (screen == SCREEN_MEDIA_PLAYING && action == ACTION_L2) {
             (void)node_media_control(&node, "seek:-10", log);
         } else if (screen == SCREEN_MEDIA_PLAYING && action == ACTION_R2) {
@@ -2515,8 +3249,13 @@ static void run_shell(struct framebuffer *fb, FILE *log)
             node.subtitle_menu_selected = (unsigned)(node.subtitle_current + 1);
             node.subtitle_resume_after_menu = !node.playback_paused;
             if (node.subtitle_resume_after_menu &&
-                node_media_control(&node, "pause", log) == 0)
+                node_media_control(&node, "pause", log) == 0) {
+                /* The decoder owns the framebuffer. Wait until it confirms
+                 * that it has closed before drawing the modal subtitle menu,
+                 * or one queued video frame can immediately paint over it. */
+                (void)node_media_wait_control_state(&node, "paused", log);
                 node.playback_paused = 1;
+            }
             screen = SCREEN_MEDIA_SUBTITLES;
             draw_media_subtitles(fb, &node);
         } else if (screen == SCREEN_MEDIA_SUBTITLES &&
@@ -2530,6 +3269,13 @@ static void run_shell(struct framebuffer *fb, FILE *log)
         } else if (screen == SCREEN_MEDIA_SUBTITLES && action == ACTION_OPEN) {
             char command[32];
             node.subtitle_current = (int)node.subtitle_menu_selected - 1;
+            draw_header(fb, "SUBTITLES");
+            draw_centered(fb, 184, "PREPARING SUBTITLES", 4,
+                          color(fb, 245, 177, 52));
+            draw_centered(fb, 276, "THE NODE IS SENDING A SMALL TEXT TRACK", 2,
+                          color(fb, 151, 220, 231));
+            draw_footer(fb, "PLEASE WAIT", "POWER IS ALWAYS AVAILABLE");
+            present(fb);
             snprintf(command, sizeof(command), "subtitle:%d", node.subtitle_current);
             (void)node_media_control(&node, command, log);
             if (node.subtitle_resume_after_menu) {
@@ -2586,6 +3332,10 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                 wifi.password[wifi.password_length] = '\0';
             }
             draw_wifi_keyboard(fb, &wifi);
+        } else if (screen == SCREEN_WIFI_KEYBOARD && action == ACTION_DELETE) {
+            if (wifi.password_length)
+                wifi.password[--wifi.password_length] = '\0';
+            draw_wifi_keyboard(fb, &wifi);
         } else if (screen == SCREEN_WIFI_KEYBOARD && action == ACTION_OPEN) {
             wifi_keyboard_select(fb, &wifi, &screen, log);
         } else if (screen == SCREEN_WIFI_RESULT && action == ACTION_BACK) {
@@ -2619,6 +3369,9 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                 wiki.query[wiki.query_length++] = ' ';
                 wiki.query[wiki.query_length] = '\0';
             }
+            draw_wikipedia_keyboard(fb, &wiki);
+        } else if (screen == SCREEN_WIKIPEDIA_KEYBOARD && action == ACTION_DELETE) {
+            if (wiki.query_length) wiki.query[--wiki.query_length] = '\0';
             draw_wikipedia_keyboard(fb, &wiki);
         } else if (screen == SCREEN_WIKIPEDIA_KEYBOARD && action == ACTION_OPEN) {
             wikipedia_keyboard_select(fb, &wiki, &screen, log);
@@ -2754,7 +3507,8 @@ static void run_shell(struct framebuffer *fb, FILE *log)
             screen = SCREEN_CARTRIDGE_DETAIL;
             draw_cartridge_detail(fb, &catalog);
         } else if (action == ACTION_BACK) {
-            if (screen == SCREEN_CARTRIDGE_LIST) guide_cartridge_release(&catalog, log);
+            if (screen == SCREEN_CARTRIDGE_LIST || screen == SCREEN_DOOM_LIST)
+                guide_cartridge_release(&catalog, log);
             screen = SCREEN_MENU;
             draw_menu(fb, selected);
         }
@@ -2776,6 +3530,7 @@ int main(void)
     if (!log) log = stderr;
     fprintf(log, "GUIDEOS INTERACTIVE SHELL BOOT DIAGNOSTICS\n");
     guide_wifi_start_installed(log);
+    bluetooth_start_async(log);
     log_wifi_diagnostics(log);
     fflush(log);
     guide_wifi_autoconnect();

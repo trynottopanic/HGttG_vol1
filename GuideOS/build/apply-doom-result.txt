@@ -1,0 +1,134 @@
+CAPTURED 22817C61732DA1319B9C5A4B0E35A7356A94EDAF3CE7BF7A64EAB9625BAD0E13
+rootfs: recovering journal
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+Free blocks count wrong (468334, counted=468328).
+Fix? yes
+
+
+rootfs: ***** FILE SYSTEM WAS MODIFIED *****
+rootfs: 1688/131072 files (0.5% non-contiguous), 55960/524288 blocks
+debugfs: rm /init
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/build/guide-hello-fb-local-media /init
+Allocated inode: 1152
+debugfs: set_inode_field /init mode 0100755
+debugfs: rm /usr/sbin/guide-hello-fb
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/build/guide-hello-fb-local-media /usr/sbin/guide-hello-fb
+Allocated inode: 1186
+debugfs: set_inode_field /usr/sbin/guide-hello-fb mode 0100755
+debugfs: rm /usr/lib/guideos/node-link/guide_node_bridge.py
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/node_link/guide_node_bridge.py /usr/lib/guideos/node-link/guide_node_bridge.py
+Allocated inode: 1236
+debugfs: set_inode_field /usr/lib/guideos/node-link/guide_node_bridge.py mode 0100755
+debugfs: rm /usr/lib/guideos/node-link/guide_node_client.py
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/node_link/guide_node_client.py /usr/lib/guideos/node-link/guide_node_client.py
+Allocated inode: 1113
+debugfs: set_inode_field /usr/lib/guideos/node-link/guide_node_client.py mode 0100644
+debugfs: rm /usr/sbin/guide-diagnostics
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/diagnostics/guide_diagnostics.py /usr/sbin/guide-diagnostics
+Allocated inode: 1237
+debugfs: set_inode_field /usr/sbin/guide-diagnostics mode 0100755
+debugfs: rm /usr/sbin/dropbear
+
+debugfs: write /mnt/g/GuideOS-private/muos-reference/../developer-link/dropbearmulti /usr/sbin/dropbear
+Allocated inode: 1137
+debugfs: set_inode_field /usr/sbin/dropbear mode 0100755
+debugfs: rm /usr/bin/dropbearkey
+
+debugfs: write /mnt/g/GuideOS-private/muos-reference/../developer-link/dropbearmulti /usr/bin/dropbearkey
+Allocated inode: 1138
+debugfs: set_inode_field /usr/bin/dropbearkey mode 0100755
+debugfs: rm /usr/bin/scp
+
+debugfs: write /mnt/g/GuideOS-private/muos-reference/../developer-link/dropbearmulti /usr/bin/scp
+Allocated inode: 1238
+debugfs: set_inode_field /usr/bin/scp mode 0100755
+debugfs: set_inode_field /root/.ssh mode 040700
+debugfs: rm /root/.ssh/authorized_keys
+
+debugfs: write /mnt/g/GuideOS-private/muos-reference/../developer-link/desktop-key.pub /root/.ssh/authorized_keys
+Allocated inode: 1140
+debugfs: set_inode_field /root/.ssh/authorized_keys mode 0100600
+debugfs: rm /usr/sbin/guide-devlink-control
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/build/guide-devlink-control-aarch64 /usr/sbin/guide-devlink-control
+Allocated inode: 1139
+debugfs: set_inode_field /usr/sbin/guide-devlink-control mode 0100755
+debugfs: rm /usr/share/licenses/dropbear/LICENSE
+
+debugfs: write /mnt/g/GuideOS-private/muos-reference/../developer-link/dropbear-2026.93/LICENSE /usr/share/licenses/dropbear/LICENSE
+Allocated inode: 1141
+debugfs: set_inode_field /usr/share/licenses/dropbear/LICENSE mode 0100644
+debugfs: rm /usr/share/guideos/developer-link.txt
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/developer_link/README.txt /usr/share/guideos/developer-link.txt
+Allocated inode: 1142
+debugfs: set_inode_field /usr/share/guideos/developer-link.txt mode 0100644
+debugfs: rm /var/lib/guideos/features/guide.prototype.developer-link.json
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/developer_link/base-feature.json /var/lib/guideos/features/guide.prototype.developer-link.json
+Allocated inode: 1143
+debugfs: set_inode_field /var/lib/guideos/features/guide.prototype.developer-link.json mode 0100644
+debugfs: rm /usr/share/guideos/fonts/DejaVuSans.ttf
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/package/guide-hello-fb/src/assets/DejaVuSans.ttf /usr/share/guideos/fonts/DejaVuSans.ttf
+Allocated inode: 1662
+debugfs: set_inode_field /usr/share/guideos/fonts/DejaVuSans.ttf mode 0100644
+debugfs: rm /usr/share/licenses/guideos/DejaVu-Fonts-LICENSE.txt
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/package/guide-hello-fb/src/assets/DejaVu-Fonts-LICENSE.txt /usr/share/licenses/guideos/DejaVu-Fonts-LICENSE.txt
+Allocated inode: 1668
+debugfs: set_inode_field /usr/share/licenses/guideos/DejaVu-Fonts-LICENSE.txt mode 0100644
+debugfs: rm /usr/lib/guideos/doom/guide-doom
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/build/guide-doom-aarch64 /usr/lib/guideos/doom/guide-doom
+Allocated inode: 1620
+debugfs: set_inode_field /usr/lib/guideos/doom/guide-doom mode 0100755
+debugfs: rm /usr/lib/guideos/doom/prboom_libretro.so
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/build/prboom_libretro-aarch64.so /usr/lib/guideos/doom/prboom_libretro.so
+Allocated inode: 1626
+debugfs: set_inode_field /usr/lib/guideos/doom/prboom_libretro.so mode 0100644
+debugfs: rm /usr/lib/guideos/doom/UPSTREAM.txt
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/doom/UPSTREAM.txt /usr/lib/guideos/doom/UPSTREAM.txt
+Allocated inode: 1628
+debugfs: set_inode_field /usr/lib/guideos/doom/UPSTREAM.txt mode 0100644
+debugfs: rm /usr/bin/guide-doom
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/doom/guide-doom-launch /usr/bin/guide-doom
+Allocated inode: 1635
+debugfs: set_inode_field /usr/bin/guide-doom mode 0100755
+debugfs: rm /usr/share/licenses/libretro-prboom/COPYING
+
+debugfs: write /home/hacker/guideos-work/sources/libretro-prboom/COPYING /usr/share/licenses/libretro-prboom/COPYING
+Allocated inode: 1640
+debugfs: set_inode_field /usr/share/licenses/libretro-prboom/COPYING mode 0100644
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+rootfs: 1692/131072 files (0.5% non-contiguous), 56227/524288 blocks
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+rootfs: 1692/131072 files (0.5% non-contiguous), 56227/524288 blocks
+BASE 22817c61732da1319b9c5a4b0e35a7356a94edaf3ce7bf7a64eab9625bad0e13  /mnt/g/GuideOS-private/muos-reference/seed-before-input-subtitle-devlink-live-rootfs.ext4
+ROOTFS 5ab7cacc539f50c04fe64f00816831a73a201b9a8aee4d2bc5154d75fe28635d  /mnt/g/GuideOS-private/muos-reference/seed-input-subtitle-devlink-live-rootfs.ext4
+SHELL 6a6a75e7a806885824d99b94f55781094f6c90fff031972c200beba61dbaa099
+DOOM_FRONTEND 4b24c10fe92b1c64cac381f3a45af87cd65d57ce4516eb0f380bf1fb69df413e
+DOOM_CORE 7028b90b3870af530f80e7aef384393431ec9e26590b81ca84634a0ea0c3a094
+DEVELOPER_LINK 6aed0f853315c44341ab3350a31981233e8bd68c15fc2df9786c2bd0d2e0dc24
+SUBTITLE_FONT b4c632e3cdf9acc7f28758fb5a323c8524d7fc6660d46904d9b6cbe2809c419c
+PREPARED 5AB7CACC539F50C04FE64F00816831A73A201B9A8AEE4D2BC5154D75FE28635D
+WRITE 100%
+VERIFIED 5AB7CACC539F50C04FE64F00816831A73A201B9A8AEE4D2BC5154D75FE28635D

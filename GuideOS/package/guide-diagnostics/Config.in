@@ -1,0 +1,7 @@
+config BR2_PACKAGE_GUIDE_DIAGNOSTICS
+	bool "guide-diagnostics"
+	select BR2_PACKAGE_PYTHON3
+	help
+	  Bounded, secret-free hardware and service reports for an authorized
+	  GuideOS Developer Link session.
+

@@ -13,6 +13,7 @@ import time
 from dataclasses import dataclass
 
 from android_provider import AndroidProviderDetector
+from application_provider import ApplicationProvider
 from media_library import MediaLibrary, MediaRecord, default_config_path
 from media_preparer import DeckMediaPreparer
 
@@ -65,11 +66,12 @@ class NodeState:
         self._lock = threading.RLock()
         self._tokens: dict[str, tuple[str, float, str]] = {}
         self._failures: dict[str, int] = {}
-        self._media_tickets: dict[str, tuple[str, float, str]] = {}
+        self._media_tickets: dict[str, tuple[str, float, str, int | None]] = {}
         self._trusted_decks: dict[str, dict[str, str]] = {}
         self._trust_armed = False
         self._load_trust()
         self.android = AndroidProviderDetector()
+        self.applications = ApplicationProvider(self.config_path)
         self.media = MediaLibrary(self.config_path)
         self.media_preparer = (DeckMediaPreparer(self.config_path.parent / "media-cache")
                                if auto_prepare else None)
@@ -89,7 +91,7 @@ class NodeState:
             prepared = self.media_preparer.prepared(current) if self.media_preparer else current
             if prepared is not None:
                 ready.append(prepared)
-        ready.sort(key=lambda record: (record.kind, record.relative_path.casefold()))
+        ready.sort(key=self.media._sort_key)
         return [record.public() for record in ready]
 
     def playback_media(self, media_id: str) -> MediaRecord | None:
@@ -98,6 +100,12 @@ class NodeState:
             return None
         return self.media_preparer.prepared(record) if self.media_preparer else record
 
+    def playback_subtitle(self, media_id: str, track: int) -> MediaRecord | None:
+        record = self.media.get(media_id)
+        if record is None or self.media_preparer is None:
+            return None
+        return self.media_preparer.subtitle(record, track)
+
     def media_preparation(self) -> dict[str, object]:
         if not self.media_preparer:
             return {"queued": 0, "preparing": 0, "ready": 0, "error": 0,
@@ -105,6 +113,7 @@ class NodeState:
         return self.media_preparer.summary()
 
     def close(self) -> None:
+        self.applications.close()
         if self.media_preparer:
             self.media_preparer.close()
 
@@ -256,13 +265,29 @@ class NodeState:
             record = self._tokens.get(token)
             return record[2] if record and record[1] > time.time() else ""
 
+    def session_client(self, token: str) -> tuple[str, str]:
+        with self._lock:
+            record = self._tokens.get(token)
+            if not record or record[1] <= time.time():
+                return "", ""
+            # Older clients did not send a persistent identity. Their temporary
+            # token still receives a distinct scope and cannot inspect another
+            # legacy client's application session.
+            identity = record[2] or hashlib.sha256(token.encode("ascii")).hexdigest()
+            return identity, record[0]
+
     def revoke_all(self) -> None:
         with self._lock:
             self._tokens.clear()
             self._media_tickets.clear()
 
-    def issue_media_ticket(self, token: str, media_id: str) -> tuple[str, int] | None:
-        if not self.authenticate(token) or self.playback_media(media_id) is None:
+    def issue_media_ticket(self, token: str, media_id: str,
+                           subtitle_track: int | None = None) -> tuple[str, int] | None:
+        if not self.authenticate(token):
+            return None
+        available = (self.playback_media(media_id) if subtitle_track is None else
+                     self.playback_subtitle(media_id, subtitle_track))
+        if available is None:
             return None
         with self._lock:
             # One session cannot accumulate an unbounded collection of URLs.
@@ -271,7 +296,7 @@ class NodeState:
                 self._media_tickets.pop(key, None)
             ticket = secrets.token_urlsafe(32)
             expiry = time.time() + MEDIA_TICKET_SECONDS
-            self._media_tickets[ticket] = (media_id, expiry, token)
+            self._media_tickets[ticket] = (media_id, expiry, token, subtitle_track)
             return ticket, int(expiry)
 
     def resolve_media_ticket(self, ticket: str):
@@ -283,8 +308,9 @@ class NodeState:
             if value[1] <= now or not self.authenticate(value[2]):
                 self._media_tickets.pop(ticket, None)
                 return None
-            media_id = value[0]
-        return self.playback_media(media_id)
+            media_id, subtitle_track = value[0], value[3]
+        return (self.playback_media(media_id) if subtitle_track is None else
+                self.playback_subtitle(media_id, subtitle_track))
 
     def session_count(self) -> int:
         now = time.time()
@@ -308,9 +334,14 @@ class NodeState:
         media_count = len(self.media_listing())
         return [
             {"id": "node.status", "available": True},
-            {"id": "media.library", "available": self.media.folder is not None,
+            {"id": "media.library", "available": bool(self.media.folders),
              "items": media_count,
-             "reason": "" if self.media.folder else "owner has not selected a media folder"},
+             "reason": "" if self.media.folders else "owner has not selected a media folder"},
             {"id": "android.provider", "available": False, "state": android["state"],
              "reason": android["reason"]},
+            {"id": "application.sessions", "available": bool(self.applications.profiles()),
+             "items": len(self.applications.profiles()),
+             "streaming_ready": self.applications.streaming_available,
+             "reason": "" if self.applications.profiles() else
+                       "owner has not added an application"},
         ]

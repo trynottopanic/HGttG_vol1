@@ -37,7 +37,7 @@ CC="${toolchain}gcc" AR="${toolchain}ar" RANLIB="${toolchain}ranlib" \
     --disable-lastlog --disable-utmp --disable-utmpx --disable-pututline \
     --disable-pututxline
 make clean
-make -j2 MULTI=1 PROGRAMS="dropbear dropbearkey"
+make -j2 MULTI=1 PROGRAMS="dropbear dropbearkey scp"
 cp dropbearmulti "${work}/dropbearmulti"
 "${toolchain}strip" "${work}/dropbearmulti"
 file "${work}/dropbearmulti"

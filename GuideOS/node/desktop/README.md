@@ -5,22 +5,47 @@ opens one understandable control panel. A Deck on the same private Wi-Fi can
 discover it, enter the code shown by the owner, and learn which carefully
 limited services the Node offers.
 
-The owner can designate one Media folder. Recognized music and video beneath
-that folder become a read-only catalogue for paired Decks, with seeking-capable
-byte-range streaming. Computer paths are never sent; each file receives an
-opaque identifier valid only for the current Node run. Changed files are
-refused until the owner rescans.
+The owner can designate any number of Media folders. Recognized music and video
+beneath them become a read-only catalogue for paired Decks, with seeking-capable
+byte-range streaming. Each selected folder becomes a top-level shelf on the
+Deck, and the directory structure beneath it is preserved for familiar browsing.
+Absolute computer paths are never sent; each file receives an opaque identifier
+valid only for the current Node run. Changed files are refused until the owner
+rescans. Existing one-folder settings migrate automatically.
 
-Videos are converted in a background cache to a conservative Deck format; the
-owner's original is never modified. Compatible text subtitle tracks are kept
-as selectable tracks. The Deck player uses a longer network buffer and exposes
-pause, seek, forward scan, reverse preview, and subtitle-selection controls.
+Videos are probed, converted, and validated in a background cache against a
+conservative Deck profile; the owner's original is never modified. The normalizer
+accepts common MP4, Matroska, WebM, AVI, QuickTime, MPEG, transport-stream, WMV,
+3GP, Ogg Video, VOB, and FLV containers; selects real media streams rather than
+cover art; repairs timestamps; scales varied resolutions and frame rates; and
+converts video and audio to H.264/AAC. Compatible text subtitle tracks are kept
+as selectable tracks. If damaged or unsupported subtitle data would invalidate
+the entire movie, conversion retries without that data and reports the actual
+file and encoder reason if both attempts fail. Video-only sources receive a
+silent audio track because the current Deck playback path expects one.
+On Windows, the Node tries AMD AMF, NVIDIA NVENC, and Intel Quick Sync against
+normalized real input, then remembers the first working H.264 encoder. If none
+works—or if a driver rejects the source—it falls back automatically to a bounded software
+encode using half of the computer's logical processors at below-normal process
+priority, keeping the control panel and other programs responsive.
+The latest detailed local failure is retained as
+`%LOCALAPPDATA%\GuideNode\media-cache\last-conversion-error.txt`; this diagnostic
+path and its contents are never disclosed to a Deck.
 
 The Node deliberately cannot run arbitrary commands, browse outside the chosen
 Media folder, modify shared files, or control Android. Those functions
 must be added later as named capabilities with their own permission checks.
 It can safely detect whether Android's command-line tools and virtual devices
 already exist, but detection never starts an emulator or enables remote access.
+
+The owner may also register specific Windows applications for temporary
+streaming sessions. A Deck sees only friendly names and every request must be
+approved in the Node window before that exact executable launches. With FFmpeg
+available, the Node can expose only the named application window as a
+640×480 H.264/MPEG-TS stream. Remote input remains disabled until its bounded
+adapter has been independently tested; an application session never becomes a
+general desktop-control or command interface. See
+`../../APPLICATION_STREAMING_0.md` for the full boundary.
 
 ## Current safety boundary
 
@@ -30,7 +55,8 @@ already exist, but detection never starts an emulator or enables remote access.
   revoked when the Node stops.
 - Requests are small and bounded; authorization secrets are not logged.
 - There is no remote shell or general-purpose file access.
-- Reparse points, symbolic links, and unrecognized file types are excluded.
+- Reparse points, symbolic links, duplicate physical files, and unrecognized
+  file types are excluded.
 
 This is still a development link. Its local HTTP traffic is not encrypted, so
 it is suitable only for controlled tests on a trusted private network. A
@@ -49,6 +75,15 @@ Command dictionary:
 - `python -m PyInstaller`: turns the Python program into one Windows program.
 - `--onefile`: puts the program in one `.exe` file.
 - `--windowed`: opens the control panel without a command window behind it.
+
+## Windows responsiveness requirement
+
+All native Windows interfaces in this project must follow
+[`../../docs/WINDOWS_UI_PERFORMANCE_STANDARD.md`](../../docs/WINDOWS_UI_PERFORMANCE_STANDARD.md).
+The shared `windows_ui_performance.py` movement governor prevents high-rate
+pointer input from becoming a replay queue that continues after the user stops.
+Its tests and the built-in movement report are required for future native UI
+prototypes, rather than being optional debugging aids.
 
 ## Later Deck connection test
 

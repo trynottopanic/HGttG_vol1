@@ -1,0 +1,146 @@
+#!/bin/sh
+set -eu
+
+PACKAGE=/opt/guide/bluetooth
+RUNTIME="$PACKAGE/root"
+RUN=/run/guide-bluetooth
+BIN="$RUNTIME/usr/bin"
+
+if [ -d "$BIN/bin" ]; then
+    BIN="$BIN/bin"
+fi
+
+export LD_LIBRARY_PATH="$RUNTIME/lib:$RUNTIME/usr/lib:$RUNTIME/usr/lib/alsa-lib"
+export PATH="$BIN:$PATH"
+export ALSA_CONFIG_DIR="$RUNTIME/usr/share/alsa"
+
+mkdir -p "$RUN" /run/dbus /var/lib/bluetooth /lib/firmware/rtlbt
+
+bluetooth_rfkill_state() {
+    for radio in /sys/class/rfkill/rfkill*; do
+        [ -r "$radio/type" ] || continue
+        type=$(cat "$radio/type" 2>/dev/null || true)
+        name=$(cat "$radio/name" 2>/dev/null || true)
+        case "$type:$name" in
+            bluetooth:*|*:sunxi-bt|*:Bluetooth) echo "$radio/state"; return 0;;
+        esac
+    done
+    return 1
+}
+
+for file in rtl8821c_fw rtl8821c_config; do
+    if [ ! -e "/lib/firmware/rtlbt/$file" ]; then
+        cp "$PACKAGE/firmware/$file" "/lib/firmware/rtlbt/$file"
+    elif ! cmp -s "$PACKAGE/firmware/$file" "/lib/firmware/rtlbt/$file"; then
+        echo "Bluetooth firmware differs; refusing to replace it." >&2
+        exit 3
+    fi
+done
+
+if [ ! -d /sys/class/bluetooth/hci0 ]; then
+    rfkill_state=$(bluetooth_rfkill_state || true)
+    if [ -z "$rfkill_state" ]; then
+        echo "Bluetooth power switch was not found." >&2
+        exit 3
+    fi
+    printf 1 > "$rfkill_state"
+    nohup "$PACKAGE/bin/rtk_hciattach" -n -s 115200 ttyS1 rtk_h5 \
+        > "$RUN/radio.log" 2>&1 &
+    echo $! > "$RUN/radio.pid"
+
+    count=0
+    while [ "$count" -lt 20 ] && [ ! -d /sys/class/bluetooth/hci0 ]; do
+        count=$((count + 1))
+        sleep 1
+    done
+    if [ ! -d /sys/class/bluetooth/hci0 ]; then
+        kill "$(cat "$RUN/radio.pid")" 2>/dev/null || true
+        printf 0 > "$rfkill_state"
+        echo "Bluetooth radio did not start; it has been turned back off." >&2
+        exit 4
+    fi
+fi
+
+dbus_alive=0
+if [ -r /run/guide-dbus.pid ]; then
+    dbus_pid=$(cat /run/guide-dbus.pid 2>/dev/null || true)
+    case "$dbus_pid" in
+        ''|*[!0-9]*) ;;
+        *) kill -0 "$dbus_pid" 2>/dev/null && dbus_alive=1;;
+    esac
+fi
+if [ "$dbus_alive" -ne 1 ]; then
+    rm -f /run/guide-dbus.pid /run/dbus/system_bus_socket
+    "$BIN/dbus-daemon" \
+        --config-file="$PACKAGE/system-guide.conf"
+fi
+
+count=0
+while [ "$count" -lt 10 ]; do
+    if [ -r /run/guide-dbus.pid ] && [ -S /run/dbus/system_bus_socket ]; then
+        dbus_pid=$(cat /run/guide-dbus.pid 2>/dev/null || true)
+        kill -0 "$dbus_pid" 2>/dev/null && break
+    fi
+    count=$((count + 1))
+    sleep 1
+done
+if [ "$count" -ge 10 ]; then
+    echo "Bluetooth message bus did not start." >&2
+    exit 5
+fi
+
+if ! pidof bluetoothd >/dev/null 2>&1; then
+    nohup "$RUNTIME/usr/libexec/bluetooth/bluetoothd" -n \
+        --noplugin=network,input,hog,midi,sap,health,sixaxis \
+        --configfile="$RUNTIME/etc/bluetooth/main.conf" \
+        > "$RUN/bluetoothd.log" 2>&1 &
+    echo $! > "$RUN/bluetoothd.pid"
+fi
+
+count=0
+while [ "$count" -lt 10 ]; do
+    if "$BIN/bluetoothctl" show >/dev/null 2>&1; then
+        break
+    fi
+    count=$((count + 1))
+    sleep 1
+done
+
+if ! "$BIN/bluetoothctl" show >/dev/null 2>&1; then
+    echo "Bluetooth service did not become ready." >&2
+    exit 7
+fi
+
+"$BIN/bluetoothctl" power on >/dev/null
+
+if ! pidof bluealsa >/dev/null 2>&1; then
+    nohup "$BIN/bluealsa" \
+        --profile=a2dp-source --initial-volume=80 \
+        > "$RUN/bluealsa.log" 2>&1 &
+    echo $! > "$RUN/bluealsa.pid"
+fi
+
+count=0
+while [ "$count" -lt 10 ]; do
+    if "$BIN/bluealsa-cli" status >/dev/null 2>&1; then
+        break
+    fi
+    count=$((count + 1))
+    sleep 1
+done
+
+if ! "$BIN/bluealsa-cli" status >/dev/null 2>&1; then
+    echo "Bluetooth radio is ready, but its audio service did not start." >&2
+    exit 8
+fi
+
+# Reconnect only devices the person explicitly paired and trusted before.
+# Failure is harmless: the internal speaker remains the output fallback.
+"$BIN/bluetoothctl" devices Trusted 2>/dev/null |
+while read -r word address remainder; do
+    [ "$word" = "Device" ] || continue
+    "$BIN/bluetoothctl" connect "$address" >/dev/null 2>&1 || true
+done
+
+touch "$RUN/audio-ready"
+echo "Bluetooth audio ready"

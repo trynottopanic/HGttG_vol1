@@ -1,0 +1,48 @@
+#!/bin/sh
+set -u
+
+PACKAGE=/opt/guide/bluetooth
+RUNTIME="$PACKAGE/root"
+BIN="$RUNTIME/usr/bin"
+[ -d "$BIN/bin" ] && BIN="$BIN/bin"
+FALLBACK_LOADER=/usr/lib/guideos/media/lib/ld-linux-aarch64.so.1
+FALLBACK_CONTROL=/usr/lib/guideos/media/bin/guide-audio-control
+
+export LD_LIBRARY_PATH="$RUNTIME/lib:$RUNTIME/usr/lib:$RUNTIME/usr/lib/alsa-lib"
+
+pcm=""
+if [ -x "$BIN/bluealsa-cli" ] && [ -S /run/dbus/system_bus_socket ]; then
+    pcm=$($BIN/bluealsa-cli list-pcms 2>/dev/null |
+        sed -n '/\/a2dpsrc\/sink$/{p;q}')
+fi
+
+if [ -n "$pcm" ]; then
+    raw=$($BIN/bluealsa-cli volume "$pcm" 2>/dev/null |
+        sed -n 's/^Volume: L: \([0-9][0-9]*\).*/\1/p')
+    case "$raw" in ''|*[!0-9]*) raw=64;; esac
+    percent=$((raw * 100 / 127))
+    case "${1-}" in
+        --volume-up) percent=$((percent + 10));;
+        --volume-down) percent=$((percent - 10));;
+    esac
+    [ "$percent" -gt 100 ] && percent=100
+    [ "$percent" -lt 0 ] && percent=0
+    if [ -n "${1-}" ]; then
+        raw=$((percent * 127 / 100))
+        $BIN/bluealsa-cli volume "$pcm" "$raw" >/dev/null 2>&1 || exit 1
+    fi
+    echo "VOLUME=$percent"
+    echo "OUTPUT=BLUETOOTH"
+    exit 0
+fi
+
+export LD_LIBRARY_PATH=/usr/lib/guideos/media/lib
+if [ ! -x "$FALLBACK_LOADER" ] || [ ! -x "$FALLBACK_CONTROL" ]; then
+    exit 1
+fi
+if [ -n "${1-}" ]; then
+    exec "$FALLBACK_LOADER" --library-path /usr/lib/guideos/media/lib \
+        "$FALLBACK_CONTROL" "$1"
+fi
+exec "$FALLBACK_LOADER" --library-path /usr/lib/guideos/media/lib \
+    "$FALLBACK_CONTROL"

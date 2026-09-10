@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import re
 import socket
 import urllib.error
 import urllib.parse
@@ -163,6 +164,32 @@ class NodeClient:
     def android_status(self) -> dict:
         return self._request("/guide/v1/android/status")
 
+    def applications(self) -> dict:
+        return self._request("/guide/v1/applications")
+
+    def request_application(self, app_id: str) -> dict:
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,47}", app_id):
+            raise NodeLinkError("APPLICATION ID IS INVALID")
+        return self._request(f"/guide/v1/applications/{app_id}/sessions", "POST", {})
+
+    def application_session(self, session_id: str) -> dict:
+        if not re.fullmatch(r"[0-9a-f]{32}", session_id):
+            raise NodeLinkError("APPLICATION SESSION IS INVALID")
+        return self._request(f"/guide/v1/application-sessions/{session_id}")
+
+    def close_application(self, session_id: str) -> dict:
+        if not re.fullmatch(r"[0-9a-f]{32}", session_id):
+            raise NodeLinkError("APPLICATION SESSION IS INVALID")
+        return self._request(f"/guide/v1/application-sessions/{session_id}/close", "POST", {})
+
+    def application_stream(self, session_id: str) -> tuple[str, str]:
+        session = self.application_session(session_id)
+        path = session.get("stream_path")
+        expected = f"/guide/v1/application-sessions/{session_id}/stream"
+        if session.get("state") != "active" or path != expected or not self.token:
+            raise NodeLinkError("APPLICATION STREAM IS NOT READY")
+        return self.base + expected, "Authorization: Bearer " + self.token + "\r\n"
+
     def media_library(self, offset: int = 0, limit: int = 100) -> dict:
         offset = max(0, int(offset))
         limit = min(200, max(1, int(limit)))
@@ -185,6 +212,18 @@ class NodeClient:
         path = result.get("path")
         if not isinstance(path, str) or not path.startswith("/guide/v1/play/"):
             raise NodeLinkError("NODE DID NOT CREATE A PLAYBACK TICKET")
+        return self.base + path
+
+    def media_subtitle_ticket(self, media_id: str, track: int) -> str:
+        if (len(media_id) != 32 or
+                any(character not in "0123456789abcdef" for character in media_id) or
+                track < 0 or track > 7):
+            raise NodeLinkError("SUBTITLE SELECTION IS INVALID")
+        result = self._request(
+            f"/guide/v1/media/{media_id}/subtitles/{track}/ticket", "POST", {})
+        path = result.get("path")
+        if not isinstance(path, str) or not path.startswith("/guide/v1/play/"):
+            raise NodeLinkError("NODE DID NOT CREATE A SUBTITLE TICKET")
         return self.base + path
 
     def unpair(self) -> None:

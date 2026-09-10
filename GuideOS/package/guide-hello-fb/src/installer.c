@@ -64,17 +64,17 @@ static const struct install_file wifi_files[] = {
 
 static const struct install_file developer_files[] = {
     {"CONTENT/bin/dropbear", "/usr/sbin/dropbear",
-     "bee8fbd8c4416cdfeec92170e7c622f0e64c5452da58b37efae8b8833ed29b01", 0755},
+     "66f1cb722862fbf84420d36a5bbb03aced3cc94149a85971f945091138cec619", 0755},
     {"CONTENT/bin/dropbearkey", "/usr/bin/dropbearkey",
-     "bee8fbd8c4416cdfeec92170e7c622f0e64c5452da58b37efae8b8833ed29b01", 0755},
+     "66f1cb722862fbf84420d36a5bbb03aced3cc94149a85971f945091138cec619", 0755},
     {"CONTENT/bin/guide-devlink-control", "/usr/sbin/guide-devlink-control",
-     "f19269c47ffb43dee8e545a7a710059d74d3165134778e2cdee8257378e5bcc8", 0755},
+     "6aed0f853315c44341ab3350a31981233e8bd68c15fc2df9786c2bd0d2e0dc24", 0755},
     {"CONTENT/config/authorized_keys", "/root/.ssh/authorized_keys",
-     "d1fa767c6ea2aa2b6d0dc8ef977274ae0083cbd71580d085105cb18664f67c1d", 0600},
+     "f7c755ae7538e34ead246e1e59810d7cb7140fc061f7df89842e9a7297993c41", 0600},
     {"CONTENT/licenses/dropbear-LICENSE", "/usr/share/licenses/dropbear/LICENSE",
      "a99ce657d790b761c132ee7e0de18edb437ae6361e536d991c6a12f36e770445", 0644},
     {"CONTENT/README.txt", "/usr/share/guideos/developer-link.txt",
-     "f66c2634c055f21fb3889f0bda75af026f1b3aa0d43e329026d67a13a5a6b9ea", 0644}
+     "44c0b26d05d093404e3c3421a83ff4db037b6e666ffb1bca00acf3a899568b7c", 0644}
 };
 
 static const struct install_file wikipedia_files[] = {

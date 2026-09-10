@@ -82,7 +82,8 @@ class DiscoveryTests(unittest.TestCase):
 
 class NodeHTTPTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.state = NodeState()
+        self.temporary = tempfile.TemporaryDirectory()
+        self.state = NodeState(config_path=Path(self.temporary.name) / "node.json")
         self.server = GuideHTTPServer(("127.0.0.1", 0), self.state)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -92,6 +93,8 @@ class NodeHTTPTests(unittest.TestCase):
         self.server.shutdown()
         self.server.server_close()
         self.thread.join(timeout=2)
+        self.state.close()
+        self.temporary.cleanup()
 
     def call(self, path: str, method: str = "GET", data: dict | None = None,
              token: str = "") -> tuple[int, dict]:
@@ -136,6 +139,27 @@ class NodeHTTPTests(unittest.TestCase):
         status, payload = self.call("/guide/v1/android/status", token=paired["token"])
         self.assertEqual(status, 200)
         self.assertFalse(payload["available"])
+
+    def test_application_request_waits_for_local_approval(self) -> None:
+        executable = Path(self.temporary.name) / "example.exe"
+        executable.write_bytes(b"MZ test fixture")
+        profile = self.state.applications.add(executable, "Example", "Example Window")
+        paired = self.call(
+            "/guide/v1/pair", "POST",
+            {"code": self.state.pairing_code, "client_name": "Test Deck",
+             "client_id": "a" * 32},
+        )[1]
+        status, listing = self.call("/guide/v1/applications", token=paired["token"])
+        self.assertEqual(status, 200)
+        self.assertNotIn("executable", str(listing))
+        status, session = self.call(
+            f"/guide/v1/applications/{profile['id']}/sessions", "POST", {}, paired["token"])
+        self.assertEqual(status, 202)
+        self.assertEqual(session["state"], "pending")
+        self.assertNotIn("stream_path", session)
+        self.assertEqual(
+            self.call(f"/guide/v1/application-sessions/{session['id']}/input",
+                      "POST", {"button": "A"}, paired["token"])[0], 501)
 
 
 if __name__ == "__main__":

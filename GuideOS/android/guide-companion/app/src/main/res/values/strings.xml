@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Guide Companion</string>
+    <string name="notification_service_name">Guide Discord message access</string>
+    <string name="choose_notification_access">Choose notification access</string>
+    <string name="forward_discord">Forward new Discord notifications</string>
+    <string name="forget_events">Forget waiting events</string>
+    <string name="events_waiting">Events waiting temporarily: %1$d</string>
+</resources>

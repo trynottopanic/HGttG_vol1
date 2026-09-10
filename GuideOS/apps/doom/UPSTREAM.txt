@@ -1,0 +1,8 @@
+libretro-prboom
+Source: https://github.com/libretro/libretro-prboom
+Revision: ddea2c6c041f7790c7bcf1dc3c1fe73b6cff0516
+Licence: GPL-2.0
+
+This engine binary contains no commercial Doom game data. Users must supply a
+lawfully obtained compatible WAD, or separately obtain freely licensed game data
+such as Freedoom under that project's licence.

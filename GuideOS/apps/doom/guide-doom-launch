@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+
+runtime=/usr/lib/guideos/media
+doom=/usr/lib/guideos/doom
+device=default
+
+if [ -x /opt/guide/bluetooth/guide-bluetooth-status ]; then
+    candidate=$(/opt/guide/bluetooth/guide-bluetooth-status 2>/dev/null |
+        sed -n 's/^ALSA=//p' | head -n 1 || true)
+    case "$candidate" in
+        bluealsa:DEV=[0-9A-Fa-f][0-9A-Fa-f]:[0-9A-Fa-f][0-9A-Fa-f]:[0-9A-Fa-f][0-9A-Fa-f]:[0-9A-Fa-f][0-9A-Fa-f]:[0-9A-Fa-f][0-9A-Fa-f]:[0-9A-Fa-f][0-9A-Fa-f],PROFILE=a2dp)
+            device=$candidate
+            export ALSA_PLUGIN_DIR="$runtime/alsa-lib"
+            export ALSA_CONFIG_PATH=/opt/guide/bluetooth/alsa-media.conf
+            ;;
+    esac
+fi
+
+export GUIDE_DOOM_ALSA_DEVICE="$device"
+exec "$runtime/lib/ld-linux-aarch64.so.1" \
+    --library-path "$runtime/lib" "$doom/guide-doom" "$1"

@@ -1,0 +1,73 @@
+rootfs: recovering journal
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+Free blocks count wrong (469790, counted=469534).
+Fix? yes
+
+Free inodes count wrong (129375, counted=129396).
+Fix? yes
+
+
+rootfs: ***** FILE SYSTEM WAS MODIFIED *****
+rootfs: 1676/131072 files (0.4% non-contiguous), 54754/524288 blocks
+debugfs: rm /init
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/build/guide-hello-fb-local-media /init
+Allocated inode: 1152
+debugfs: set_inode_field /init mode 0100755
+debugfs: rm /usr/sbin/guide-hello-fb
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/build/guide-hello-fb-local-media /usr/sbin/guide-hello-fb
+Allocated inode: 1186
+debugfs: set_inode_field /usr/sbin/guide-hello-fb mode 0100755
+debugfs: rm /usr/lib/guideos/node-link/guide_node_bridge.py
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/node_link/guide_node_bridge.py /usr/lib/guideos/node-link/guide_node_bridge.py
+Allocated inode: 1238
+debugfs: set_inode_field /usr/lib/guideos/node-link/guide_node_bridge.py mode 0100755
+debugfs: rm /usr/lib/guideos/node-link/guide_node_client.py
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/node_link/guide_node_client.py /usr/lib/guideos/node-link/guide_node_client.py
+Allocated inode: 1113
+debugfs: set_inode_field /usr/lib/guideos/node-link/guide_node_client.py mode 0100644
+debugfs: rm /usr/sbin/guide-diagnostics
+
+debugfs: write /mnt/e/DGttG/HGttG_vol1/GuideOS/apps/diagnostics/guide_diagnostics.py /usr/sbin/guide-diagnostics
+Allocated inode: 1237
+debugfs: set_inode_field /usr/sbin/guide-diagnostics mode 0100755
+debugfs: rm /usr/sbin/dropbear
+
+debugfs: write /mnt/g/GuideOS-private/muos-reference/../developer-link/dropbearmulti /usr/sbin/dropbear
+Allocated inode: 1137
+debugfs: set_inode_field /usr/sbin/dropbear mode 0100755
+debugfs: rm /usr/bin/dropbearkey
+
+debugfs: write /mnt/g/GuideOS-private/muos-reference/../developer-link/dropbearmulti /usr/bin/dropbearkey
+Allocated inode: 1138
+debugfs: set_inode_field /usr/bin/dropbearkey mode 0100755
+debugfs: rm /usr/bin/scp
+debugfs: write /mnt/g/GuideOS-private/muos-reference/../developer-link/dropbearmulti /usr/bin/scp
+Allocated inode: 1617
+debugfs: set_inode_field /usr/bin/scp mode 0100755
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+rootfs: 1677/131072 files (0.5% non-contiguous), 55052/524288 blocks
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+rootfs: 1677/131072 files (0.5% non-contiguous), 55052/524288 blocks
+BASE c2d2cb6e37b6660574c48e3f0e5f54cefa5febf4538ff9a4a1527eeccce4eff6  /mnt/g/GuideOS-private/muos-reference/seed-before-local-media-player-rootfs.ext4
+ROOTFS 1d3f152af2c7e4c58dc0906f3d02727690c969b75d8dea382a44901584ef963b  /mnt/g/GuideOS-private/muos-reference/seed-local-media-player-live-rootfs.ext4
+SHELL 486dc08a53a0353d7c38a8c768a868ad9a76f0b040177e117d5e0a3da5d06203
+BRIDGE aba26e66e593317e8e0678c7e19f0607ea313b7f037dac63fb9c60d5de24a9cc
+CLIENT 36b16ce5a3d8984d6436e7afb51c4d7f5aebe3480473fa5bf83b931385c59aaf
+DIAGNOSTICS 78ffd1b92ad23118962c358b0f58d14a00793084511a32821a748bf95d00f699
+DEVELOPER_LINK 66f1cb722862fbf84420d36a5bbb03aced3cc94149a85971f945091138cec619
