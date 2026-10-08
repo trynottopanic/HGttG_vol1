@@ -1,36 +1,43 @@
-# Public repository boundary
+# Public source scope
 
-Target: https://github.com/trynottopanic/HGttG_vol1.
+This repository contains GuideOS source, Windows NDI source, board integration,
+public foundation documents, desktop prototypes and generic interface assets.
+The [handbook](docs/HANDBOOK.md) describes the current component status.
 
-Public source includes the GuideOS shell/providers, NDI source, public foundation
-documents, board/configuration material, original generic UI/boot assets and
-desktop prototypes. The repository's existing software/documentation licenses
-remain unchanged. Third-party material retains its own notices.
+## Included and local material
 
-The following remain local: build outputs and receipts, handoff copies, physical
-card captures/writers, credentials and saved owner state, packaged cartridges,
-and Planegotchi-specific source, tools, tests, data, service, documentation and
-artwork. The Home globe sheets derived from Planegotchi artwork are also excluded;
-the public shell has a simple placeholder and handles the missing application.
-The export omits the application-specific sections of the shared alignment
-index while preserving the complete local document. Optional shell interface
-names remain in generic GuideOS code; the application's implementation does not.
+Build outputs, disk images, deployment receipts, credentials, signing keys,
+saved owner data and packaged applications remain outside the public source.
+Planegotchi-specific code, tests, documents, data and artwork also remain local.
+The public shell handles the absent application with a generic placeholder.
+Shared documents omit its private sections; general interface names can remain
+in the shell without including the application's implementation.
 
-`.gitignore` prevents accidental future additions but cannot remove an object
-already in Git history. The local unpublished `0.3 beginnings` commit contains
-multi-GiB root images. The publication candidate is therefore prepared on top of
-the existing GitHub `main` instead of inheriting that unpublished commit. Its
-parent remains the published history, allowing a normal fast-forward update.
-The original local checkout, history, releases and private files remain intact.
+Local editor and automation instructions are ignored. Useful contributor
+guidance is maintained in the [development guide](docs/DEVELOPMENT.md).
 
-`tools/repository/publication.py --check` checks the source candidate's file
-boundary, size and common credential patterns without printing secret values.
-The export option copies only selected source files into a fresh publication
-worktree; it does not push or rewrite history. Local audit reports stay outside
-this repository. This is a focused preparation check, not a claim that every
-feature or every historical link has been validated.
+## Source checks and exports
 
-The installed version record is 0.4.4.03, while this source checkout can contain
-later development. It does not supply the private base image or a fully pinned
-from-scratch recipe for the installed release. Public release images and a
-complete image build are separate preparation tasks.
+```sh
+python3 -B tools/repository/publication.py --check
+```
+
+This checks the selected source for excluded files, oversized files and common
+credential patterns without printing secret values. It does not audit Git
+history or exercise runtime behavior. Ignoring a file prevents future additions;
+it does not remove a file already committed.
+
+The export option copies the selected source into a fresh publication worktree.
+It does not push or rewrite history. Keep local audit reports outside the
+repository, and preserve private sections in the original development files.
+
+The installed release and a development checkout can differ. This repository
+does not supply the private base image or a fully pinned recipe for rebuilding
+the installed system. Component builds and initial Debian reference recipes
+remain available; public release images require separate preparation.
+
+## Licensing
+
+Original software uses AGPL-3.0-or-later. Original documentation and visual
+material use CC-BY-SA-4.0. File-specific and third-party notices retain their
+own terms. See the [license policy](LICENSE.md).

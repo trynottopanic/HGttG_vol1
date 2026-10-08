@@ -94,3 +94,8 @@ __pycache__/
 Thumbs.db
 *.swp
 *~
+
+# Local automation and editor instructions are not public documentation.
+AGENTS.md
+.agents/
+.codex/

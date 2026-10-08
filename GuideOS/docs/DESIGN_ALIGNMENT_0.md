@@ -117,7 +117,7 @@ the separate initialization/playback budgets are a subsequent staged correction.
   universal anonymity, absolute separation or zero risk on GuideOS. Security
   measures should fit actual exposure and practical costs. Distinguish explicit
   requirements from philosophical preferences and implementation choices; see
-  [the working guidance](../AGENTS.md#scope-of-philosophical-guidance).
+  [the working guidance](../../docs/DEVELOPMENT.md#design-and-source-guidance).
 - Minimal Debian is the selected new system base. The retained Buildroot tree
   records earlier implementation work.
 - The owner accepted systemd as PID 1 for Debian, with Guide Supervisor above
@@ -442,7 +442,7 @@ existing physical arbitration risk; it does not resolve that risk.
 Oversight should make the next decision clearer: report the specific conflict,
 likely consequence and recommended correction. It should not turn routine work
 into repeated permission requests or substitute documentation for a functioning
-system. The working instructions in `../AGENTS.md` carry this practice forward.
+system. The [development guide](../../docs/DEVELOPMENT.md) carries this practice forward.
 
 ## 0.3.7 integration checkpoint (25 September 2026)
 

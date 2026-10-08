@@ -36,7 +36,7 @@ The PNGs are visual references, not pixel-perfect specifications or runtime asse
 
 ## Implementation sequence
 
-1. Read `AGENTS.md`, `THEME_FIELD_1.md`, and `SHELL_UI_SCHEMA_MIGRATION_0.md`.
+1. Read the [development guide](../../../../docs/DEVELOPMENT.md), `THEME_FIELD_1.md`, and `SHELL_UI_SCHEMA_MIGRATION_0.md`.
 2. Add Field Theme tokens as a new root-owned validated theme variant; retain Paper Theme 0 and the compiled fallback/recovery presentation.
 3. Convert only shared chrome plus Home and System Status first. Derive visible focus geometry and pointer hit rectangles from the same layout result.
 4. Produce deterministic 640x480 renders and run the existing shell, keyboard, Wi-Fi, audio, and pointer tests without changing their semantics.

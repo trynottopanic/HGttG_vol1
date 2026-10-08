@@ -1,5 +1,12 @@
 # GuideOS Media Library 1 development slice
 
+Historical checkpoint: the notes below describe the initial Media Library 1
+development slice. For current component status, see the
+[project handbook](../../../docs/HANDBOOK.md#current-status). The
+[media library](../../docs/MEDIA_LIBRARY_1_IMPLEMENTATION.md) and
+[media session](../../docs/MEDIA_SESSION_1_IMPLEMENTATION.md) records
+describe the subsequent provider work.
+
 Status: host-tested read-only catalog, storage lifecycle adapter, Media Session
 state machine and Envelope 0 broker cores. This package is not installed in a
 seed image and is not physical Deck evidence.

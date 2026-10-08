@@ -1,5 +1,9 @@
 # Debian Guide Shell integration slice 0
 
+Historical checkpoint: the notes below describe Shell 0. For the present
+interface and media capabilities, see the [project handbook](../../../../../docs/HANDBOOK.md#current-status)
+and [GPU compositor](../../../../docs/GPU_UI_COMPOSITOR.md).
+
 This is the first production-shaped GuideOS component on the Debian foundation.
 It proves one accountable owner for the built-in display and ordinary controls.
 It is not the finished shell and contains no media player.

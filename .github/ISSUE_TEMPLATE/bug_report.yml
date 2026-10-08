@@ -1,0 +1,31 @@
+name: Bug report
+description: Report a problem in GuideOS, NDI, or a prototype.
+body:
+  - type: input
+    id: component
+    attributes:
+      label: Component
+      placeholder: GuideOS shell, NDI, media, connectivity, or a prototype
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and observed behavior
+      description: Describe what you expected and what happened.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: How to reproduce
+      description: List the steps, or describe when the problem happens.
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Version or source revision
+      description: Release version or commit, if known.
+    validations:
+      required: false

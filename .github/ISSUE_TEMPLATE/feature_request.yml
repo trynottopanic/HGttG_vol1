@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest a concrete use or behavior for the project.
+body:
+  - type: textarea
+    id: use
+    attributes:
+      label: What would you like to do?
+      description: Describe the situation or task this would help with.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Proposed behavior
+      description: Explain how the feature would work for the person using it.
+    validations:
+      required: true
+  - type: input
+    id: component
+    attributes:
+      label: Component
+      placeholder: GuideOS, NDI, or a prototype, if applicable
+    validations:
+      required: false

@@ -49,7 +49,7 @@ candidates as pending or uninstalled.
 - Notepad remains **0.1.0-preview.1**; its application version is independent.
 - Current workspace: `E:\DGttG\HGttG_vol1\GuideOS`. Windows PowerShell plus WSL
   Ubuntu. WSL path: `/mnt/e/DGttG/HGttG_vol1/GuideOS`.
-- Read `AGENTS.md`. The shared checkout contains substantial uncommitted and
+- Read the [development guide](../../docs/DEVELOPMENT.md). The shared checkout contains substantial uncommitted and
   untracked work from multiple conversations. Do not reset, clean, replace or
   broadly commit it. No new branch/worktree or new chat was created for this handoff.
 
@@ -246,7 +246,7 @@ request changed the development version and documents only.
 
 ## Starting instruction for the next conversation
 
-Read this handoff, AGENTS.md and NOTEPAD_PHYSICAL_RESULT_0.md. Continue GuideOS
+Read this handoff, the [development guide](../../docs/DEVELOPMENT.md) and NOTEPAD_PHYSICAL_RESULT_0.md. Continue GuideOS
 0.3.9 from the latest successful Notepad Seed capture. Start by reproducing and
 fixing cold-provider startup and clarifying uninstalled application records;
 then investigate the TF2 controller clock failure. Keep installed, staged and

@@ -2,7 +2,7 @@
 
 The owner approved this draft on 3 October 2026. Production implementation and
 its separate evidence are recorded in
-`docs/NOTEPAD_UI_IMPLEMENTATION_2026_10_03.md`; these images remain the approved
+[Notepad UI implementation](../../../docs/NOTEPAD_UI_IMPLEMENTATION_2026_10_03.md); these images remain the approved
 concept references rather than screenshots of an installed Deck.
 
 Two 640 x 480 concept screens requested by the owner on 3 October 2026.

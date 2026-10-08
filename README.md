@@ -1,126 +1,58 @@
+![The Third Way — GuideOS and HHGttG, local-first personal computing](.github/assets/project-banner.svg)
+
 # The Third Way
 
-The Third Way is an open, local-first personal-computing project. Its goal is
-to let people connect information, devices, and services through tools that
-serve and protect the person using them while respecting everyone else's
-autonomy.
+An experimental personal computing project built around devices and services
+that the person using them controls. **GuideOS** is the Linux environment for a
+portable **Deck**. **HHGttG** is the architecture and protocol work that connects
+Decks, nearby **Nodes**, and optional interpretation services.
 
-HHGttG remains the protocol and architecture name, and GuideOS remains the
-provisional operating-environment name. These technical identifiers are kept
-stable while the larger idea is known as the Third Way.
+The current hardware target is the **Anbernic RG35XX H**, using minimal Debian
+ARM64. The source includes a controller-driven interface, media playback,
+Notepad, storage and connectivity providers, and a Windows Node interface.
 
-The Third Way does not accept a forced choice between opposing technological
-models. It examines both, keeps what serves people from each, rejects what
-subordinates or harms them, and builds toward the direction those judgments
-indicate.
+**Development status:** source and documentation are available here. A public
+installable image and a complete build of the working Deck image are still in
+preparation. See the [handbook](docs/HANDBOOK.md#current-status) for component
+status and the limits of the available builds.
 
-GuideOS is the Linux-based operating environment being developed for a
-person's **Deck**. A Deck is a portable, user-controlled computer that can use
-nearby **Nodes** for shared information or processing and can optionally work
-with a **Semiotic Engine** for interpretation and retrieval.
+## Start here
 
-The project is a personal, experimental system. The latest locally installed
-GuideOS revision is **0.4.4.03**, with its system-partition write and readback
-verified on 6 October 2026. Deck testing remains separate from that evidence.
-The working source also contains ongoing development beyond the installed
-revision. See the [GuideOS overview](GuideOS/README.md),
-[documentation index](GuideOS/docs/README.md), and
-[design alignment record](GuideOS/docs/DESIGN_ALIGNMENT_0.md).
+| I want to… | Read |
+| --- | --- |
+| Understand the project | [Project handbook](docs/HANDBOOK.md) · [Plain-text edition](docs/HANDBOOK.txt) |
+| Find a specification or component | [Documentation](docs/README.md) · [Complete catalogue](docs/CATALOG.md) |
+| Explore the Deck implementation | [GuideOS](GuideOS/README.md) |
+| Run the Windows Node interface | [NDI setup and source](GuideOS/node/desktop/README.md) |
+| Work on the code or documentation | [Development guide](docs/DEVELOPMENT.md) |
 
-This public repository contains source and project documentation. Local device
-images, credentials, saved owner data, build/deployment records, packaged
-cartridges and Planegotchi-specific material are excluded. The working Deck's
-image is not a downloadable public release, and this checkout does not provide
-a complete recipe for rebuilding that image from scratch.
+## Project principles
 
-## Design goals
+- Useful local operation without a mandatory cloud account.
+- Open interfaces and portable information.
+- Permissions enforced by the system and controlled by the owner.
+- Clear interfaces that work with modest hardware.
+- Interoperation that respects the people on both sides of a connection.
 
-- Local usefulness without a mandatory cloud account.
-- Open protocols rather than control by one platform or provider.
-- Understandable permissions enforced by the system, not entrusted to an AI.
-- Interoperability across different Decks, Nodes, interfaces, and hardware.
-- Simple creation through readable **Guide Recipes**.
-- Portable, inspectable **Guide Packages** built from existing open formats.
-- Plain-language interfaces and documentation with exact technical detail
-  available to anyone who wants it.
-- Reciprocal autonomy: protect the owner without harming or disrupting others.
-- Formless methods with a firm purpose: use whatever interoperable tools serve
-  the person, without turning a particular technology or school into doctrine.
+The [project definition](HHG_Foundation/02_GUIDE_AND_PROTOTYPE_DEFINITION.txt)
+and [design philosophy](HHG_Foundation/03_DESIGN_PHILOSOPHY.txt) contain the
+full foundations. The handbook explains the terminology and prototype scenarios.
 
-## First hardware target
+## Repository layout
 
-The first Deck target is the Anbernic RG35XX H. The initial hardware milestone
-is a minimal image that boots, operates the built-in display and controls,
-recognizes storage, reports basic system state, and shuts down safely.
+| Path | Contents |
+| --- | --- |
+| [GuideOS/](GuideOS/) | Deck source, providers, board integration and contracts |
+| [HHG_Foundation/](HHG_Foundation/) | Project definition and design principles |
+| [prototypes/](prototypes/) | Desktop continuity, viewing and event experiments |
+| [docs/](docs/) | Handbook, development guidance and documentation catalogue |
+| [tools/repository/](tools/repository/) | Source-publication and documentation checks |
 
-The first end-to-end acceptance test is `CONTINUE-ON-DECK-0`: pause an
-authorized local video on the desktop Node, connect the Deck by USB, transfer
-the video together with its playback position, disconnect, and resume locally
-on the Deck at substantially the same moment. This tests a core Third Way idea:
-the person's activity can move between devices without an account or cloud
-service.
+## Contributing and licensing
 
-The following network test is `VISITING-SCREEN-1`: with the network owner's
-consent, select one movie on the
-Deck, let the owner's temporary host discover and control a compatible
-television, stream the movie directly from the Deck without an internet upload,
-and revoke access afterward. The Windows prototype is in
-[`prototypes/visiting_screen_1/`](prototypes/visiting_screen_1/).
+Use [CONTRIBUTING.md](CONTRIBUTING.md) to get started. Documentation is maintained
+in UTF-8 Markdown or plain text; diagrams and reference images supplement it.
 
-A secondary event-routing test is `MESSAGE-CHIME-0`: after the user's phone
-receives a text from an explicitly chosen person, it sends a one-time local
-event over Wi-Fi and the Deck plays a chosen sound. The event need not disclose
-the text itself, and the cell providers do not need to match.
-
-This test keeps rendering and file service on the Deck while placing consent
-and destination control with the owner of the visited network. A later native
-GuideOS version can replace the temporary Windows Deck program without changing
-that boundary.
-
-## Source layout
-
-- `GuideOS/` contains the minimal Debian foundation work, retained Buildroot
-  implementation, board material, application sources and design contracts.
-- `HHG_Foundation/02_GUIDE_AND_PROTOTYPE_DEFINITION.txt` defines the Third Way,
-  its technical architecture, and the current prototype.
-- `HHG_Foundation/03_DESIGN_PHILOSOPHY.txt` records the project's public design
-  principles.
-- `prototypes/` contains the retained desktop transfer, viewing and event tests.
-- `tools/repository/` prepares and checks the public source candidate.
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for local checks and the publication
-boundary. Software and board history remain in their existing directories;
-dated notes retain their original evidence and status.
-
-The owner selected minimal Debian for the rework. Hardware support remains a
-separate board layer; the old Buildroot baseline and source locks describe
-earlier work. Each image must identify its own pinned inputs and hash.
-
-Start with [Modern foundation 0](GuideOS/MODERN_FOUNDATION_0.md) and
-[Debian bring-up](GuideOS/DEBIAN_BRINGUP_0.md). The earlier Buildroot workshop and
-its command dictionary remain in [BUILDING.md](GuideOS/BUILDING.md), with its
-input records in [SOURCES.lock](GuideOS/SOURCES.lock).
-
-## Accessibility of development
-
-Buildroot and hardware enablement are necessarily technical, but they should
-be explained rather than treated as an entrance examination. Instructions will
-state what a command accomplishes, define unfamiliar terms, and preserve the
-exact detail needed to reproduce the result.
-
-Ordinary Guide programs should not require operating-system development.
-Recipes will provide the approachable creation layer, with deterministic tools
-for validation, testing, permissions, packaging, and exchange.
-
-## Licensing
-
-Original software and build configuration are licensed under the GNU Affero
-General Public License, version 3 or later. Original documentation and visual
-design material are licensed under Creative Commons Attribution-ShareAlike 4.0
-International. See [LICENSE.md](LICENSE.md) for the precise repository policy
-and canonical license texts.
-
-Third-party components retain their own licenses and must be identified before
-inclusion. Project names and compatibility descriptions do not grant trademark
-rights or imply affiliation with Douglas Adams, his estate, or rights holders
-associated with *The Hitchhiker's Guide to the Galaxy*.
+Original software is **AGPL-3.0-or-later**. Original documentation and visual
+material are **CC-BY-SA-4.0**. Third-party material retains its own notices.
+See [LICENSE.md](LICENSE.md) for the full policy.

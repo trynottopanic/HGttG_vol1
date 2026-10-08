@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="280" viewBox="0 0 1120 280" role="img" aria-labelledby="banner-title banner-description">
+  <title id="banner-title">The Third Way — GuideOS / HHGttG</title>
+  <desc id="banner-description">A navy project banner with pale-blue lettering and a simple line drawing of a person-owned Deck connected to two nearby Nodes.</desc>
+  <rect width="1120" height="280" rx="18" fill="#142B3A"/>
+  <g font-family="DejaVu Sans, Segoe UI, Arial, sans-serif">
+    <text x="48" y="58" fill="#AFCBDA" font-size="13" letter-spacing="2.2">LOCAL-FIRST PERSONAL COMPUTING</text>
+    <text x="46" y="127" fill="#EDF5FA" font-size="52" font-weight="700">The Third Way</text>
+    <text x="49" y="171" fill="#BED5E1" font-size="23">GuideOS / HHGttG</text>
+    <text x="49" y="227" fill="#AFCBDA" font-size="16">Person-owned devices. Open protocols.</text>
+  </g>
+  <g fill="none" stroke="#AFCBDA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M870 141H917M917 141V89H971M917 141V202H971" stroke="#749BAC"/>
+    <rect x="675" y="84" width="195" height="116" rx="18" fill="#183745"/>
+    <rect x="727" y="103" width="94" height="77" rx="6" fill="#203F4D"/>
+    <path d="M741 122H787M741 135H804M741 148H787" stroke="#749BAC"/>
+    <path d="M693 141H715M704 130V152"/>
+    <circle cx="839" cy="136" r="3" fill="#AFCBDA" stroke="none"/>
+    <circle cx="850" cy="147" r="3" fill="#AFCBDA" stroke="none"/>
+    <rect x="971" y="58" width="108" height="62" rx="11" fill="#183745"/>
+    <rect x="971" y="171" width="108" height="62" rx="11" fill="#183745"/>
+    <path d="M988 104H1062M988 217H1062" stroke="#749BAC"/>
+  </g>
+  <g fill="#BED5E1" font-family="DejaVu Sans, Segoe UI, Arial, sans-serif" font-size="13" letter-spacing="1.5">
+    <text x="1001" y="91">NODE</text>
+    <text x="1001" y="204">NODE</text>
+    <text x="749" y="224">DECK</text>
+  </g>
+  <circle cx="917" cy="141" r="4" fill="#EFB24D"/>
+</svg>

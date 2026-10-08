@@ -145,7 +145,7 @@ conversation. Standing authorization covers building, validating and writing
 the identified seed. Do not request the same write permission again. No new
 conversation was created or messaged. This file is the handoff entry point.
 
-Read ../AGENTS.md. Develop GuideOS from its documents; systemd is PID1 and Guide
+Read the [development guide](../../docs/DEVELOPMENT.md). Develop GuideOS from its documents; systemd is PID1 and Guide
 supervision sits above it. Keep board-specific bring-up separate from portable
 contracts. The owner wants direct technical communication, no unprompted joviality
 or responsibility framing. Do not turn philosophical guidance into blanket
