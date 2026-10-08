@@ -24,7 +24,7 @@ TARGET_WIDTH = 640
 TARGET_HEIGHT = 360
 VIDEO_BITRATE_KBPS = 1200
 AUDIO_BITRATE_KBPS = 128
-CONVERSION_REVISION = "deck-video-640x360-v4-accelerated"
+CONVERSION_REVISION = "deck-video-640x360-v5-audio-tracks"
 TEXT_SUBTITLE_CODECS = {
     "ass", "ssa", "subrip", "srt", "text", "mov_text", "webvtt", "microdvd",
 }
@@ -307,6 +307,7 @@ class DeckMediaPreparer:
                 [ffprobe, "-v", "error", "-show_entries",
                  "stream=index,codec_type,codec_name,width,height,pix_fmt:"
                  "stream_disposition=attached_pic:"
+                 "stream_tags=language,title:"
                  "format=duration", "-of", "json", str(path)],
                 stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60,
                 creationflags=flags, check=False,
@@ -360,6 +361,8 @@ class DeckMediaPreparer:
         streams = streams if isinstance(streams, list) else []
         video_index = self._stream_index(streams, "video")
         audio_index = self._stream_index(streams, "audio")
+        audio_indices=[s['index'] for s in streams if isinstance(s,dict) and
+                       s.get('codec_type')=='audio' and type(s.get('index')) is int][:8]
         subtitle_indices = []
         if subtitles:
             for value in streams:
@@ -381,11 +384,20 @@ class DeckMediaPreparer:
         if silent_audio:
             arguments += ["-map", "1:a:0", "-shortest"]
         elif audio_index is not None:
-            arguments += ["-map", f"0:{audio_index}"]
+            for index in audio_indices:arguments += ["-map", f"0:{index}"]
         else:
             arguments += ["-map", "0:a:0?"]
         for index in subtitle_indices[:8]:
             arguments += ["-map", f"0:{index}"]
+        for output_index,index in enumerate(audio_indices):
+            source_track=next(s for s in streams if isinstance(s,dict) and s.get('index')==index)
+            tags=source_track.get('tags',{})
+            if isinstance(tags,dict):
+                for tag in ('language','title'):
+                    value=tags.get(tag)
+                    if isinstance(value,str):
+                        arguments += [f'-metadata:s:a:{output_index}',f'{tag}={value[:128]}']
+            arguments += [f'-disposition:a:{output_index}','default' if output_index==0 else '0']
         pixel_format = "nv12" if encoder != "libx264" else "yuv420p"
         arguments += [
             "-vf", "scale=640:360:force_original_aspect_ratio=decrease:"

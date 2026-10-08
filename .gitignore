@@ -3,6 +3,68 @@
 /dl/
 /output/
 
+# Local build, image, deployment and handoff records are not public source.
+/GuideOS/build/
+/GuideOS/handoffs/
+/GuideOS/cartridges/
+/private-recovery/
+/publication/
+/artifacts/
+**/dist/
+**/.venv/
+**/venv/
+**/node_modules/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.gradle/
+**/.idea/
+**/local.properties
+
+# Planegotchi remains local and is excluded from the public repository.
+**/*planegotchi*
+**/*PLANEGOTCHI*
+/GuideOS/board/rg35xxh/debian/shell0/guide_settlement.py
+/GuideOS/board/rg35xxh/debian/shell0/settlement_grid_runtime.py
+/GuideOS/board/rg35xxh/debian/shell0/test_settlement_viewer.py
+/GuideOS/package/guide-foundation/systemd/guide-planegotchi-background.service
+/GuideOS/design/home-planet-motion/
+/GuideOS/board/rg35xxh/debian/shell0/assets/home-design/planet-*.png
+/GuideOS/docs/HOME_WORLD_CONTINUITY_0.md
+/GuideOS/docs/HOME_WHEEL_WORLD_WINDOW_0.md
+
+# Credentials and private local state; examples and public keys remain source.
+.env
+.env.*
+!.env.example
+!.env.sample
+*.key
+*.pem
+id_rsa
+id_ed25519
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+
+# Packaged output belongs outside the source checkout.
+*.ext4
+*.bin
+*.exe
+*.dll
+*.so
+*.o
+*.a
+*.guide
+*.guide-release
+*.zip
+*.tar
+*.tar.gz
+*.tar.xz
+*.log
+*.tmp
+
 # Generated system images
 *.img
 *.img.gz

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://guide.invalid/schemas/semiotic-engine-request-0.json",
+  "title": "Semiotic Engine Protocol 0 request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "request_id", "task", "context", "limits", "policy"],
+  "properties": {
+    "protocol": {"const": "guide-se/0"},
+    "request_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "task": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "instruction", "output_format"],
+      "properties": {
+        "kind": {"const": "text.summarize"},
+        "instruction": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "output_format": {"const": "guide-summary/0"}
+      }
+    },
+    "context": {
+      "type": "array", "minItems": 1, "maxItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "media_type", "content", "source"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-zA-Z0-9._:-]{1,64}$"},
+          "media_type": {"const": "text/plain"},
+          "content": {"type": "string", "minLength": 1, "maxLength": 32000},
+          "source": {
+            "type": "object", "additionalProperties": false,
+            "required": ["label"],
+            "properties": {"label": {"type": "string", "minLength": 1, "maxLength": 120}}
+          }
+        }
+      }
+    },
+    "limits": {
+      "type": "object", "additionalProperties": false,
+      "required": ["deadline_ms", "max_output_chars", "retention"],
+      "properties": {
+        "deadline_ms": {"type": "integer", "minimum": 1, "maximum": 300000},
+        "max_output_chars": {"type": "integer", "minimum": 1, "maximum": 4000},
+        "retention": {"const": "none"}
+      }
+    },
+    "policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["tools", "network", "additional_context"],
+      "properties": {
+        "tools": {"const": false},
+        "network": {"const": false},
+        "additional_context": {"const": false}
+      }
+    }
+  }
+}

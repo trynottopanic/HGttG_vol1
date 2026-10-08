@@ -17,10 +17,21 @@ indicate.
 GuideOS is the Linux-based operating environment being developed for a
 person's **Deck**. A Deck is a portable, user-controlled computer that can use
 nearby **Nodes** for shared information or processing and can optionally work
-with a **Semiotic Engine**, the project's term for language-model assistance.
+with a **Semiotic Engine** for interpretation and retrieval.
 
-The project is at an early experimental stage. Nothing in this repository is
-currently a bootable release or safe to flash to a device.
+The project is a personal, experimental system. The latest locally installed
+GuideOS revision is **0.4.4.03**, with its system-partition write and readback
+verified on 6 October 2026. Deck testing remains separate from that evidence.
+The working source also contains ongoing development beyond the installed
+revision. See the [GuideOS overview](GuideOS/README.md),
+[documentation index](GuideOS/docs/README.md), and
+[design alignment record](GuideOS/docs/DESIGN_ALIGNMENT_0.md).
+
+This public repository contains source and project documentation. Local device
+images, credentials, saved owner data, build/deployment records, packaged
+cartridges and Planegotchi-specific material are excluded. The working Deck's
+image is not a downloadable public release, and this checkout does not provide
+a complete recipe for rebuilding that image from scratch.
 
 ## Design goals
 
@@ -68,21 +79,27 @@ that boundary.
 
 ## Source layout
 
-- `GuideOS/` contains the emerging Buildroot external tree, board material,
-  distribution notes, and provisional interface concepts.
+- `GuideOS/` contains the minimal Debian foundation work, retained Buildroot
+  implementation, board material, application sources and design contracts.
 - `HHG_Foundation/02_GUIDE_AND_PROTOTYPE_DEFINITION.txt` defines the Third Way,
   its technical architecture, and the current prototype.
 - `HHG_Foundation/03_DESIGN_PHILOSOPHY.txt` records the project's public design
   principles.
+- `prototypes/` contains the retained desktop transfer, viewing and event tests.
+- `tools/repository/` prepares and checks the public source candidate.
 
-GuideOS currently uses Buildroot 2025.02.17 as its approved system-building
-baseline and intends to begin hardware work on the Linux 6.18.y long-term
-kernel line. Exact release inputs will be pinned and hashed before an image is
-distributed.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for local checks and the publication
+boundary. Software and board history remain in their existing directories;
+dated notes retain their original evidence and status.
 
-The current workshop setup and its command dictionary are documented in
-[`GuideOS/BUILDING.md`](GuideOS/BUILDING.md). Exact approved input revisions are
-recorded in [`GuideOS/SOURCES.lock`](GuideOS/SOURCES.lock).
+The owner selected minimal Debian for the rework. Hardware support remains a
+separate board layer; the old Buildroot baseline and source locks describe
+earlier work. Each image must identify its own pinned inputs and hash.
+
+Start with [Modern foundation 0](GuideOS/MODERN_FOUNDATION_0.md) and
+[Debian bring-up](GuideOS/DEBIAN_BRINGUP_0.md). The earlier Buildroot workshop and
+its command dictionary remain in [BUILDING.md](GuideOS/BUILDING.md), with its
+input records in [SOURCES.lock](GuideOS/SOURCES.lock).
 
 ## Accessibility of development
 

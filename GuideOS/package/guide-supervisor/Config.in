@@ -1,0 +1,6 @@
+config BR2_PACKAGE_GUIDE_SUPERVISOR
+	bool "guide-supervisor"
+	help
+	  Minimal GuideOS PID 1 and foreground-session supervisor. It owns
+	  process lifecycle, orphan reaping, scheduling classes, recovery,
+	  and safe shutdown while the Guide interface runs as a child.

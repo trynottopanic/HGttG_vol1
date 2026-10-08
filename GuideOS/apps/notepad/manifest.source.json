@@ -1,0 +1,21 @@
+{
+  "capabilities": [
+    "storage.private",
+    "output.visual.surface",
+    "input.actions",
+    "input.text"
+  ],
+  "entrypoint": {
+    "callable": "application",
+    "interfaceMajor": 1,
+    "module": "notepad",
+    "runtime": "guide.python-application"
+  },
+  "format": "GUIDE-CARTRIDGE-1",
+  "id": "org.hhgtg.notepad",
+  "installAction": "application.install.v0",
+  "kind": "application",
+  "name": "Notepad",
+  "summary": "Notepad with native notes and document views. Internal drafts; external documents unavailable.",
+  "version": "0.1.0-preview.2"
+}

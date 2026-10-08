@@ -1,4 +1,6 @@
 source "$BR2_EXTERNAL_GUIDE_OS_PATH/package/guide-hello-fb/Config.in"
+source "$BR2_EXTERNAL_GUIDE_OS_PATH/package/guide-supervisor/Config.in"
 source "$BR2_EXTERNAL_GUIDE_OS_PATH/package/guide-wikipedia-core/Config.in"
 source "$BR2_EXTERNAL_GUIDE_OS_PATH/package/guide-node-link-core/Config.in"
+source "$BR2_EXTERNAL_GUIDE_OS_PATH/package/guide-se-deck/Config.in"
 source "$BR2_EXTERNAL_GUIDE_OS_PATH/package/guide-diagnostics/Config.in"

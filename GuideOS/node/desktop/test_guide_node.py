@@ -41,6 +41,18 @@ class NodeStateTests(unittest.TestCase):
         self.assertFalse(status["available"])
         self.assertIn(status["state"], {"not-installed", "detected-not-enabled"})
 
+    def test_semiotic_engine_opt_in_survives_restart(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            config = Path(folder) / "config.json"
+            state = NodeState(config_path=config)
+            self.assertFalse(state.semiotic.enabled)
+            state.set_semiotic_enabled(True)
+            restarted = NodeState(config_path=config)
+            self.assertTrue(restarted.semiotic.enabled)
+            restarted.set_semiotic_enabled(False)
+            disabled = NodeState(config_path=config)
+            self.assertFalse(disabled.semiotic.enabled)
+
     def test_trust_requires_node_approval_and_survives_restart(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             config = Path(folder) / "config.json"
@@ -111,6 +123,16 @@ class NodeHTTPTests(unittest.TestCase):
 
     def test_status_requires_pairing(self) -> None:
         self.assertEqual(self.call("/guide/v1/status")[0], 401)
+
+    def test_at_field_closed_preserves_session_but_declines_new_pairing(self) -> None:
+        request = {"code": self.state.pairing_code, "client_name": "Test Deck"}
+        status, paired = self.call("/guide/v1/pair", "POST", request)
+        self.assertEqual(status, 200)
+        self.state.set_at_field("closed")
+        self.assertEqual(self.call("/guide/v1/status", token=paired["token"])[0], 200)
+        self.assertEqual(self.call("/guide/v1/pair", "POST", request)[0], 403)
+        self.state.set_at_field("familiar")
+        self.assertEqual(self.call("/guide/v1/pair", "POST", request)[0], 200)
 
     def test_pair_then_read_capabilities(self) -> None:
         status, paired = self.call(

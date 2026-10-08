@@ -20,7 +20,7 @@ from guide_node_core import (
 )
 
 
-MAX_BODY_BYTES = 16 * 1024
+MAX_BODY_BYTES = 64 * 1024
 DISCOVERY_REQUEST = b"GUIDE-DISCOVER/1\n"
 MEDIA_STREAM_TIMEOUT_SECONDS = 10 * 60
 
@@ -145,6 +145,17 @@ class GuideRequestHandler(BaseHTTPRequestHandler):
             })
         elif path == "/guide/v1/capabilities":
             self._send(200, {"capabilities": self.server.state.capabilities()})
+        elif path == "/guide/v1/diagnostics":
+            self._send(200, {"commands": self.server.state.diagnostic_capabilities()})
+        elif re.fullmatch(r"/guide/v1/semiotic/jobs/[0-9a-f]{32}", path):
+            job_id = path.rsplit("/", 1)[-1]
+            owner = self.server.state.session_client(self._token())[0]
+            try:
+                result = self.server.state.semiotic.get(job_id, owner)
+            except ConnectionError as error:
+                self._send(502, {"error": str(error)})
+                return
+            self._send(200, result) if result else self._send(404, {"error": "job not found"})
         elif path == "/guide/v1/android/status":
             self._send(200, self.server.state.android.status())
         elif path == "/guide/v1/applications":
@@ -327,6 +338,7 @@ class GuideRequestHandler(BaseHTTPRequestHandler):
                 str(request.get("client_id", "")),
                 str(request.get("secret", "")),
                 str(request.get("client_name", "")),
+                self.client_address[0],
             )
             if not result.ok:
                 self._send(403, {"error": result.reason})
@@ -348,7 +360,7 @@ class GuideRequestHandler(BaseHTTPRequestHandler):
         elif path == "/guide/v1/trust":
             trusted = self.server.state.trust_session(self._token())
             if trusted is None:
-                self._send(403, {"error": "approve this trust request on the Node first"})
+                self._send(403, {"error": "paired session expired or remembering could not be saved"})
             else:
                 client_id, secret = trusted
                 self._send(200, {"trusted": True, "client_id": client_id, "secret": secret})
@@ -357,6 +369,20 @@ class GuideRequestHandler(BaseHTTPRequestHandler):
             client_id = self.server.state.session_identity(token)
             revoked = bool(client_id) and self.server.state.revoke_trust(client_id)
             self._send(200, {"trusted": False, "revoked": revoked})
+        elif path == "/guide/v1/semiotic/jobs":
+            request = self._read_json()
+            if request is None:
+                self._send(400, {"error": "invalid or oversized request"})
+                return
+            owner = self.server.state.session_client(self._token())[0]
+            try:
+                result = self.server.state.semiotic.submit(owner, request)
+            except ValueError as error:
+                self._send(400, {"error": str(error)})
+            except ConnectionError as error:
+                self._send(502, {"error": str(error)})
+            else:
+                self._send(202, result)
         elif re.fullmatch(r"/guide/v1/media/[0-9a-f]{32}/subtitles/[0-7]/ticket", path):
             parts = path.split("/")
             media_id, track = parts[-4], int(parts[-2])
@@ -400,6 +426,26 @@ class GuideRequestHandler(BaseHTTPRequestHandler):
             # Input injection is deliberately withheld until it has its own bounded,
             # independently tested adapter. A session never grants desktop control.
             self._send(501, {"error": "application input adapter is not installed"})
+        else:
+            self._send(404, {"error": "not found"})
+
+    def do_DELETE(self) -> None:
+        if not self._local_peer():
+            self._send(403, {"error": "local network only"})
+            return
+        if not self._authorized():
+            self._send(401, {"error": "pairing required"})
+            return
+        path = self._path()
+        if re.fullmatch(r"/guide/v1/semiotic/jobs/[0-9a-f]{32}", path):
+            job_id = path.rsplit("/", 1)[-1]
+            owner = self.server.state.session_client(self._token())[0]
+            try:
+                result = self.server.state.semiotic.cancel(job_id, owner)
+            except ConnectionError as error:
+                self._send(502, {"error": str(error)})
+                return
+            self._send(202, result) if result else self._send(404, {"error": "job not found"})
         else:
             self._send(404, {"error": "not found"})
 
@@ -447,6 +493,8 @@ class DiscoveryResponder:
             except OSError:
                 break
             if data != DISCOVERY_REQUEST or not is_local_address(peer[0]):
+                continue
+            if not self.state.at_field.discoverable:
                 continue
             payload = self.state.public_description()
             payload["address"] = f"http://{self.address}:{self.http_port}"

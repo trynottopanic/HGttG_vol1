@@ -1,0 +1,31 @@
+[Unit]
+Description=Guide audio playback and earbud controls
+Wants=guide-wireplumber.service
+Requires=guide-pipewire.service
+After=guide-wireplumber.service data.mount
+RequiresMountsFor=/data/guideos/media
+
+[Service]
+User=guide-audio
+Group=audio
+SupplementaryGroups=bluetooth
+RuntimeDirectory=guideos-audio
+RuntimeDirectoryMode=0755
+StateDirectory=guideos-audio
+Environment=XDG_RUNTIME_DIR=/run/guide-audio
+Environment=XDG_CACHE_HOME=/var/lib/guideos-audio/cache
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/guide-audio/bus
+ExecStart=/usr/bin/python3 /usr/lib/guideos/audio/audio_service.py
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=6
+MemoryHigh=96M
+MemoryMax=192M
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+IPAddressDeny=any
+ReadWritePaths=/run/guideos-audio /var/lib/guideos-audio
+
+[Install]
+WantedBy=multi-user.target

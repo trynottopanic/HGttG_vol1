@@ -1,0 +1,113 @@
+[schema]
+name = "Guide Components"
+version = 0
+display_profile = "deck-640x480"
+
+[application_header]
+left = 16
+right = 624
+baseline_y = 18
+rule_y = 34
+battery_x = 565
+battery_y = 10
+battery_width = 31
+battery_height = 15
+accessory_x = 624
+
+[content]
+left = 16
+right = 624
+top = 52
+bottom = 403
+
+[status_panel]
+left = 16
+top = 344
+right = 624
+bottom = 403
+baseline_y = 374
+divider_top = 352
+divider_bottom = 395
+divider_x = [190, 414]
+text_x = [40, 218, 478]
+
+[application_footer]
+left = 16
+right = 624
+rule_y = 424
+button_top = 441
+baseline_y = 453
+battery_x = 565
+battery_y = 443
+battery_width = 31
+battery_height = 15
+
+[audio_player]
+panel_left = 16
+panel_top = 52
+panel_right = 624
+panel_bottom = 286
+art_left = 30
+art_top = 70
+art_right = 138
+art_bottom = 178
+title_x = 158
+title_y = 91
+source_y = 126
+output_y = 161
+progress_left = 88
+progress_top = 199
+progress_right = 552
+progress_bottom = 205
+time_y = 202
+previous_button = [130, 223, 228, 275]
+pause_button = [243, 223, 397, 275]
+next_button = [412, 223, 510, 275]
+control_y = 249
+
+[audio_queue]
+left = 16
+top = 297
+right = 624
+bottom = 412
+row_height = 38
+label_x = 74
+menu_x = 601
+first_baseline_y = 321
+
+[button_badge]
+minimum_width = 24
+horizontal_padding = 12
+label_gap = 7
+item_gap = 18
+
+[video_viewport]
+left = 16
+top = 52
+right = 624
+bottom = 332
+
+[video_transport]
+left = 16
+top = 282
+right = 624
+bottom = 332
+button_left = 26
+button_top = 292
+button_right = 113
+button_bottom = 322
+baseline_y = 307
+elapsed_x = 126
+progress_left = 176
+progress_top = 302
+progress_right = 535
+progress_bottom = 310
+duration_x = 614
+pause_bar_1 = [38, 299, 42, 314]
+pause_bar_2 = [47, 299, 51, 314]
+
+[headphone_icon]
+left = 438
+top = 358
+right = 466
+bottom = 385

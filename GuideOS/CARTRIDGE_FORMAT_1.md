@@ -77,3 +77,14 @@ the browser labels Format 1 packages unsigned.
 The card installer verifies the package before copying and uses temporary
 names followed by atomic renames. It does not format the card or erase other
 files.
+
+
+## Accepted bounded application profile
+
+`application.install.v0` is the first typed Python application action. Its
+non-null entrypoint selects `guide.python-application`, interface 1, a validated
+module identifier and callable. The former null-entrypoint rule continues to
+apply to legacy data profiles. See [Cartridge Installer 0](docs/CARTRIDGE_INSTALLER_0.md)
+and `package/guide-installer/application-profile-v0.json` for the profile,
+authority, limits and recovery boundary. Application declarations request
+permissions; the root-owned installation agreement grants them.

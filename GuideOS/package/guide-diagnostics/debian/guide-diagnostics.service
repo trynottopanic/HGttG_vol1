@@ -1,0 +1,25 @@
+[Unit]
+Description=Guide bounded resource and playback diagnostics
+After=local-fs.target data.mount
+RequiresMountsFor=/data/guideos/diagnostics
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/lib/guideos/diagnostics/diagnostics_service.py
+RuntimeDirectory=guideos-diagnostics
+RuntimeDirectoryMode=0755
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=5
+Nice=15
+CPUWeight=10
+CPUQuota=5%
+MemoryHigh=32M
+MemoryMax=64M
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/data/guideos/diagnostics /run/guideos-diagnostics
+IPAddressDeny=any
+
+[Install]
+WantedBy=multi-user.target

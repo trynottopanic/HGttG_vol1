@@ -1,0 +1,44 @@
+From 7d9745db9a7dc688b73766fa78ca97d80fd995a4 Mon Sep 17 00:00:00 2001
+From: GuideOS Project <guideos@localhost>
+Date: Thu, 10 Sep 2026 22:40:00 -0400
+Subject: [PATCH] serialize generated lexer builds
+
+The generated lexers and parsers in libnslog and nsgenbind share output
+directories whose creation is not represented as a prerequisite. Under a
+parallel Buildroot build, flex can run before those directories exist. Keep
+these small sub-builds serial while allowing the rest of NetSurf and Buildroot
+to remain parallel.
+
+---
+ libnslog/Makefile  | 2 ++
+ nsgenbind/Makefile | 2 ++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/libnslog/Makefile b/libnslog/Makefile
+index 56c8301..5d53872 100644
+--- a/libnslog/Makefile
++++ b/libnslog/Makefile
+@@ -4,6 +4,8 @@
+ # Copyright 2014-1015 Vincent Sanders <vince@netsurf-browser.org>
+ # Copyright 2017 Daniel Silverstone <dsilvers@netsurf-browser.org>
+ 
++.NOTPARALLEL:
++
+ # Component settings
+ COMPONENT := nslog
+ COMPONENT_VERSION := 0.1.3
+diff --git a/nsgenbind/Makefile b/nsgenbind/Makefile
+index 2101eca..040ac6f 100644
+--- a/nsgenbind/Makefile
++++ b/nsgenbind/Makefile
+@@ -3,6 +3,8 @@
+ #
+ # Copyright 2013-2020 Vincent Sanders <vince@netsurf-browser.org>
+ 
++.NOTPARALLEL:
++
+ # Define the component name
+ COMPONENT := nsgenbind
+ # And the component type
+-- 
+2.43.0

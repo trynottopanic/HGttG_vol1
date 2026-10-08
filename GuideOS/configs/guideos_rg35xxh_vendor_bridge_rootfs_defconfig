@@ -3,6 +3,8 @@
 # binary. Private bring-up tooling combines the result with a user-owned boot
 # reference; distributable GuideOS images must return to the open boot chain.
 BR2_aarch64=y
+BR2_CCACHE=y
+BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL_GUIDE_OS_PATH)/patches"
 BR2_ARM_FPU_VFPV4=y
 BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_6_12=y
 BR2_TOOLCHAIN_BUILDROOT_MUSL=y
@@ -33,4 +35,6 @@ BR2_PACKAGE_LIBDRM=y
 BR2_PACKAGE_MPV=y
 BR2_PACKAGE_DNSMASQ=y
 BR2_PACKAGE_GUIDE_HELLO_FB=y
+BR2_PACKAGE_GUIDE_SUPERVISOR=y
+BR2_PACKAGE_GUIDE_WIKIPEDIA_CORE=y
 BR2_PACKAGE_GUIDE_DIAGNOSTICS=y

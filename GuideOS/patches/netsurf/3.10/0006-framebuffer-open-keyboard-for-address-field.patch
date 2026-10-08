@@ -1,0 +1,29 @@
+From 7fedca57da68b199604e7237398b5f5307b778b2 Mon Sep 17 00:00:00 2001
+From: GuideOS Project <guideos@localhost>
+Date: Sat, 12 Sep 2026 10:30:00 -0400
+Subject: [PATCH] framebuffer: open keyboard for address field
+
+The framebuffer URL field previously accepted focus but gave a controller-only
+Deck no way to type.  Reveal NetSurf's existing keyboard on completed clicks,
+preserving the normal caret placement and avoiding activation on button-down.
+
+---
+ netsurf/frontends/framebuffer/fbtk/text.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/netsurf/frontends/framebuffer/fbtk/text.c b/netsurf/frontends/framebuffer/fbtk/text.c
+index 40a3b31..c3ba917 100644
+--- a/netsurf/frontends/framebuffer/fbtk/text.c
++++ b/netsurf/frontends/framebuffer/fbtk/text.c
+@@ -512,6 +512,9 @@ text_input_click(fbtk_widget_t *widget, fbtk_callback_info *cbi)
+ 
+ 	fbtk_request_redraw(widget);
+ 
++	if (cbi->event->type == NSFB_EVENT_KEY_UP)
++		map_osk();
++
+ 	return 0;
+ }
+ 
+-- 
+2.43.0

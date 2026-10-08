@@ -1,0 +1,15 @@
+--- a/drivers/gpu/drm/panel/panel-mipi.c
++++ b/drivers/gpu/drm/panel/panel-mipi.c
+@@ -662,6 +662,12 @@
+ 	drm_display_info_set_bus_formats(&connector->display_info,
+ 					 &mipi->bus_format, 1);
+ 
++	/*
++	 * TODO: Remove once all drm drivers call
++	 * drm_connector_set_orientation_from_panel()
++	 */
++	drm_connector_set_panel_orientation(connector, mipi->orientation);
++
+ 	return count;
+ }
+ 

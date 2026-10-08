@@ -1,4 +1,6 @@
-* text=auto
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
 
 # Build and Linux system files must retain Unix line endings.
 *.in text eol=lf
@@ -13,7 +15,8 @@
 *.dts text eol=lf
 *.patch text eol=lf
 *.sh text eol=lf
-*.patch whitespace=-blank-at-eol,-space-before-tab
+*.patch whitespace=-blank-at-eol,-space-before-tab,-blank-at-eof
+*.md whitespace=-blank-at-eol
 *.py text eol=lf
 *.ps1 text eol=lf
 .gitignore text eol=lf
@@ -22,3 +25,9 @@ GuideOS/board/rg35xxh/prototype-overlay/etc/** text eol=lf
 
 # Generated design concepts are binary.
 *.png binary
+*.gif binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.rgb565* binary

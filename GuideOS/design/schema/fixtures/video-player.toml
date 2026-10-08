@@ -1,0 +1,62 @@
+[screen]
+schema_version = 0
+pattern = "video-player"
+display_profile = "deck-640x480"
+output = "video-player-renderer-draft-0.png"
+
+[header]
+identity = "The Guide / Video"
+title = "City on the Hill"
+
+[header.accessory]
+kind = "battery"
+value = 78
+
+[video]
+placeholder = "paper-mountains"
+
+[transport]
+state = "paused"
+action = "Pause"
+elapsed = "38:12"
+duration = "1:42:09"
+progress = 0.384
+accent = "rust"
+
+[[status.items]]
+label = "Audio 1/2"
+kind = "text"
+
+[[status.items]]
+label = "Subtitles: English"
+kind = "text"
+
+[[status.items]]
+label = "Bluetooth"
+kind = "headphones"
+color = "green"
+
+[[footer.actions]]
+button = "B"
+label = "Pause"
+color = "rust"
+
+[[footer.actions]]
+button = "L2/R2"
+label = "Seek"
+color = "ink"
+
+[[footer.actions]]
+button = "X"
+label = "Subtitles"
+color = "blue"
+
+[[footer.actions]]
+button = "A"
+label = "Back"
+color = "green"
+
+[footer.accessory]
+kind = "text"
+value = "Pocket unavailable"
+color = "blue"

@@ -1,0 +1,118 @@
+From 661295695e2d1f23e24d102e658421587624a93b Mon Sep 17 00:00:00 2001
+From: GuideOS Project <guideos@localhost>
+Date: Wed, 16 Sep 2026 08:00:00 -0400
+Subject: [PATCH] framebuffer: complete the Deck keyboard
+
+Make Shift a latched upper/symbol mode suitable for controller input, correct
+three punctuation key mappings, use labels available in the Deck font, and
+translate Backspace explicitly while editing web-page fields.
+
+---
+ netsurf/frontends/framebuffer/fbtk/osk.c | 38 +++++++++++++++++++++----
+ netsurf/frontends/framebuffer/gui.c      |  4 +++
+ 2 files changed, 36 insertions(+), 6 deletions(-)
+
+--- a/netsurf/frontends/framebuffer/fbtk/osk.c
++++ b/netsurf/frontends/framebuffer/fbtk/osk.c
+@@ -60,7 +60,7 @@
+ 	{ 200,   0,  20,  15, "0", NSFB_KEY_0},
+ 	{ 220,   0,  20,  15, "-", NSFB_KEY_MINUS},
+ 	{ 240,   0,  20,  15, "=", NSFB_KEY_EQUALS},
+-	{ 260,   0,  40,  15, "\xe2\x8c\xab", NSFB_KEY_BACKSPACE},
++	{ 260,   0,  40,  15, "BKSP", NSFB_KEY_BACKSPACE},
+ 	{   0,  15,  30,  15, "\xe2\x86\xb9", NSFB_KEY_TAB},
+ 	{  30,  15,  20,  15, "q", NSFB_KEY_q},
+ 	{  50,  15,  20,  15, "w", NSFB_KEY_w},
+@@ -74,7 +74,7 @@
+ 	{ 210,  15,  20,  15, "p", NSFB_KEY_p},
+ 	{ 230,  15,  20,  15, "[", NSFB_KEY_LEFTBRACKET},
+ 	{ 250,  15,  20,  15, "]", NSFB_KEY_RIGHTBRACKET},
+-	{ 275,  15,  25,  30, "\xe2\x8f\x8e", NSFB_KEY_RETURN},
++	{ 275,  15,  25,  30, "ENT", NSFB_KEY_RETURN},
+ 	{  35,  30,  20,  15, "a", NSFB_KEY_a},
+ 	{  55,  30,  20,  15, "s", NSFB_KEY_s},
+ 	{  75,  30,  20,  15, "d", NSFB_KEY_d},
+@@ -85,10 +85,10 @@
+ 	{ 175,  30,  20,  15, "k", NSFB_KEY_k},
+ 	{ 195,  30,  20,  15, "l", NSFB_KEY_l},
+ 	{ 215,  30,  20,  15, ";", NSFB_KEY_SEMICOLON},
+-	{ 235,  30,  20,  15, "'", NSFB_KEY_l},
++	{ 235,  30,  20,  15, "'", NSFB_KEY_QUOTE},
+ 	{ 255,  30,  20,  15, "#", NSFB_KEY_HASH},
+-	{   0,  45,  25,  15, "\xe2\x87\xa7", NSFB_KEY_LSHIFT},
+-	{  25,  45,  20,  15, "\\", NSFB_KEY_SLASH},
++	{   0,  45,  25,  15, "SH", NSFB_KEY_LSHIFT},
++	{  25,  45,  20,  15, "\\", NSFB_KEY_BACKSLASH},
+ 	{  45,  45,  20,  15, "z", NSFB_KEY_z},
+ 	{  65,  45,  20,  15, "x", NSFB_KEY_x},
+ 	{  85,  45,  20,  15, "c", NSFB_KEY_c},
+@@ -98,9 +98,9 @@
+ 	{ 165,  45,  20,  15, "m", NSFB_KEY_m},
+ 	{ 185,  45,  20,  15, ",", NSFB_KEY_COMMA},
+ 	{ 205,  45,  20,  15, ".", NSFB_KEY_PERIOD},
+-	{ 225,  45,  20,  15, "/", NSFB_KEY_BACKSLASH},
+-	{ 245,  45,  55,  15, "\xe2\x87\xa7", NSFB_KEY_RSHIFT},
+-	{  40,  67, 185,  15, "", NSFB_KEY_SPACE},
++	{ 225,  45,  20,  15, "/", NSFB_KEY_SLASH},
++	{ 245,  45,  55,  15, "SHIFT", NSFB_KEY_RSHIFT},
++	{  40,  67, 185,  15, "SPACE", NSFB_KEY_SPACE},
+ 	{ 250,  60,  20,  15, "\xe2\x96\xb2", NSFB_KEY_UP},
+ 	{ 230,  67,  20,  15, "\xe2\x97\x80", NSFB_KEY_LEFT},
+ 	{ 270,  67,  20,  15, "\xe2\x96\xb6", NSFB_KEY_RIGHT},
+@@ -108,6 +108,7 @@
+ };
+ 
+ static fbtk_widget_t *osk;
++static bool osk_shift_latched;
+ 
+ static int
+ osk_close(fbtk_widget_t *widget, fbtk_callback_info *cbi)
+@@ -115,6 +116,14 @@
+ 	if (cbi->event->type != NSFB_EVENT_KEY_UP)
+ 		return 0;
+ 
++	if (osk_shift_latched) {
++		nsfb_event_t event;
++		event.type = NSFB_EVENT_KEY_UP;
++		event.value.keycode = NSFB_KEY_LSHIFT;
++		fbtk_input(widget, &event);
++		osk_shift_latched = false;
++	}
++
+ 	fbtk_set_mapping(osk, false);
+ 
+ 	return 0;
+@@ -126,6 +135,18 @@
+ 	nsfb_event_t event;
+ 	struct kbd_button_s *kbd_button = cbi->context;
+ 
++	if (kbd_button->keycode == NSFB_KEY_LSHIFT ||
++	    kbd_button->keycode == NSFB_KEY_RSHIFT) {
++		if (cbi->event->type != NSFB_EVENT_KEY_UP)
++			return 0;
++		event.type = osk_shift_latched ? NSFB_EVENT_KEY_UP :
++			NSFB_EVENT_KEY_DOWN;
++		event.value.keycode = NSFB_KEY_LSHIFT;
++		fbtk_input(widget, &event);
++		osk_shift_latched = !osk_shift_latched;
++		return 0;
++	}
++
+ 	event.type = cbi->event->type;
+ 	event.value.keycode = kbd_button->keycode;
+ 	fbtk_input(widget, &event);
+--- a/netsurf/frontends/framebuffer/gui.c
++++ b/netsurf/frontends/framebuffer/gui.c
+@@ -885,6 +885,10 @@
+ 			browser_window_key_press(gw->bw, NS_KEY_DELETE_RIGHT);
+ 			break;
+ 
++		case NSFB_KEY_BACKSPACE:
++			browser_window_key_press(gw->bw, NS_KEY_DELETE_LEFT);
++			break;
++
+ 		case NSFB_KEY_PAGEUP:
+ 			if (browser_window_key_press(gw->bw,
+ 					NS_KEY_PAGE_UP) == false)
+-- 
+2.43.0

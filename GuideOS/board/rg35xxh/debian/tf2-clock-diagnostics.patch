@@ -1,0 +1,18 @@
+--- a/drivers/mmc/host/sunxi-mmc.c
++++ b/drivers/mmc/host/sunxi-mmc.c
+@@ -688,6 +688,15 @@
+ 
+ 	if (rval & SDXC_START) {
+ 		dev_err(mmc_dev(host->mmc), "fatal err update clk timeout\n");
++		/* Board bring-up evidence: no recovery or power-policy change. */
++		if (!strcmp(dev_name(host->dev), "4022000.mmc"))
++			dev_err(host->dev,
++				"GUIDE_TF2_CLOCK enable=%u cmd=%08x clk=%08x status=%08x module_hz=%lu ios_hz=%u power=%u runtime_active=%d\n",
++				oclk_en, rval, mmc_readl(host, REG_CLKCR),
++				mmc_readl(host, REG_STAS),
++				clk_get_rate(host->clk_mmc), host->mmc->ios.clock,
++				host->mmc->ios.power_mode,
++				pm_runtime_active(host->dev));
+ 		return -EIO;
+ 	}
+ 

@@ -1,0 +1,1916 @@
+{
+  "format": 1,
+  "interfaces": [
+    {
+      "name": "guide.supervisor.lifecycle",
+      "major": 1,
+      "minor": 2,
+      "endpoint": "/run/guideos/supervisor/control.sock",
+      "operations": [
+        {
+          "name": "LAUNCH",
+          "code": 1,
+          "grant": "owner.lifecycle.control",
+          "cancellable": false,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "application_id",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "instance_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "generation",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "RESOLVE",
+          "code": 2,
+          "grant": "broker.peer.resolve",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "pid",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "uid",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "gid",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "instance_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "generation",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "application_code",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "policy_mask",
+              "key": 3,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "STOP",
+          "code": 3,
+          "grant": "owner.lifecycle.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "instance_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "generation",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "accepted",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "STATUS",
+          "code": 4,
+          "grant": "owner.lifecycle.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "instance_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "generation",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "phase",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "checkpoint",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "HEALTH",
+          "code": 5,
+          "grant": "owner.lifecycle.control",
+          "cancellable": false,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "application_id",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "instance_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "generation",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "FIND",
+          "code": 6,
+          "grant": "owner.lifecycle.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "application_id",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "running",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "instance_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": false
+            },
+            {
+              "name": "generation",
+              "key": 2,
+              "type": "uint",
+              "required": false
+            }
+          ]
+        }
+      ],
+      "events": []
+    },
+    {
+      "name": "guide.broker.control",
+      "major": 1,
+      "minor": 1,
+      "endpoint": "/run/guideos/brokers/control.sock",
+      "operations": [
+        {
+          "name": "SNAPSHOT",
+          "code": 1,
+          "grant": "none",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [],
+          "result": [
+            {
+              "name": "registry_revision",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "RESOLVE",
+          "code": 2,
+          "grant": "none",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "capability_code",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "offered",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "interface_major",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "ACQUIRE",
+          "code": 3,
+          "grant": "installed-policy",
+          "cancellable": false,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "capability_code",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "expires_ns",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "WATCH",
+          "code": 4,
+          "grant": "none",
+          "cancellable": true,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "after_revision",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "registry_revision",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "RELEASE",
+          "code": 5,
+          "grant": "grant-owner",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "released",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "VALIDATE",
+          "code": 6,
+          "grant": "grant-owner",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "capability_code",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "valid",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "RENEW",
+          "code": 7,
+          "grant": "grant-owner",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "capability_code",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "expires_ns",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        }
+      ],
+      "events": []
+    },
+    {
+      "name": "guide.broker.health",
+      "major": 1,
+      "minor": 0,
+      "endpoint": "/run/guideos/brokers/health.sock",
+      "operations": [
+        {
+          "name": "SNAPSHOT",
+          "code": 1,
+          "grant": "system.diagnostics.read",
+          "cancellable": false,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "service_state",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "registry_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        }
+      ],
+      "events": []
+    },
+    {
+      "name": "guide.installer.control",
+      "major": 1,
+      "minor": 0,
+      "endpoint": "/run/guideos/installer/control.sock",
+      "operations": [
+        {
+          "name": "INSPECT",
+          "code": 1,
+          "grant": "owner.installer.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "BEGIN",
+          "code": 2,
+          "grant": "owner.installer.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "STATUS",
+          "code": 3,
+          "grant": "owner.installer.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "CANCEL",
+          "code": 4,
+          "grant": "owner.installer.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "INSTALLED",
+          "code": 5,
+          "grant": "owner.installer.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "UNINSTALL",
+          "code": 6,
+          "grant": "owner.installer.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "DELETE_PRIVATE_DATA",
+          "code": 7,
+          "grant": "owner.installer.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "ROLLBACK",
+          "code": 8,
+          "grant": "owner.installer.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "PREPARE_SHUTDOWN",
+          "code": 9,
+          "grant": "owner.installer.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        }
+      ],
+      "events": []
+    },
+    {
+      "name": "guide.storage.cartridges",
+      "major": 1,
+      "minor": 0,
+      "endpoint": "/run/guideos-storage/cartridges.sock",
+      "operations": [
+        {
+          "name": "LIST",
+          "code": 1,
+          "grant": "owner.installer.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "OPEN",
+          "code": 2,
+          "grant": "owner.installer.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [
+            "read-only-regular-archive"
+          ],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        }
+      ],
+      "events": []
+    },
+    {
+      "name": "guide.broker.provider",
+      "major": 1,
+      "minor": 0,
+      "endpoint": "/run/guideos/brokers/provider.sock",
+      "operations": [
+        {
+          "name": "VALIDATE_PEER",
+          "code": 1,
+          "grant": "trusted-provider",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {"name": "grant_id", "key": 0, "type": "bytes16", "required": true},
+            {"name": "capability_code", "key": 1, "type": "uint", "required": true},
+            {"name": "peer_pid", "key": 2, "type": "uint", "required": true},
+            {"name": "peer_uid", "key": 3, "type": "uint", "required": true},
+            {"name": "peer_gid", "key": 4, "type": "uint", "required": true}
+          ],
+          "result": [
+            {"name": "valid", "key": 0, "type": "uint", "required": true},
+            {"name": "instance_id", "key": 1, "type": "bytes16", "required": true},
+            {"name": "generation", "key": 2, "type": "uint", "required": true}
+          ]
+        }
+      ],
+      "events": []
+    },
+    {
+      "name": "guide.media.library",
+      "major": 1,
+      "minor": 0,
+      "endpoint": "/run/guideos/brokers/media-library.sock",
+      "operations": [
+        {
+          "name": "SNAPSHOT",
+          "code": 1,
+          "grant": "media.library.browse",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "library_revision",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "source_count",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "available_item_count",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "incomplete",
+              "key": 3,
+              "type": "bool",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "LIST",
+          "code": 2,
+          "grant": "media.library.browse",
+          "cancellable": true,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "after_media_id",
+              "key": 1,
+              "type": "nullable_bytes16",
+              "required": true
+            },
+            {
+              "name": "limit",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "source_class",
+              "key": 3,
+              "type": "nullable_uint",
+              "required": true
+            },
+            {
+              "name": "media_kind",
+              "key": 4,
+              "type": "nullable_uint",
+              "required": true
+            },
+            {
+              "name": "source_id",
+              "key": 5,
+              "type": "nullable_bytes16",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "library_revision",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "records",
+              "key": 1,
+              "type": "record_array",
+              "required": true
+            },
+            {
+              "name": "more",
+              "key": 2,
+              "type": "bool",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "DESCRIBE",
+          "code": 3,
+          "grant": "media.library.browse",
+          "cancellable": true,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "media_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "availability_generation",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "media_summary",
+              "key": 0,
+              "type": "record",
+              "required": true
+            },
+            {
+              "name": "tracks",
+              "key": 1,
+              "type": "record_array",
+              "required": true
+            },
+            {
+              "name": "seekability",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "preparation_state",
+              "key": 3,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "preparation_progress_per_mille",
+              "key": 4,
+              "type": "nullable_uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "OPEN",
+          "code": 4,
+          "grant": "media.source.open",
+          "cancellable": true,
+          "retry": "none",
+          "descriptors": [
+            {
+              "role": "media-read",
+              "required": false
+            }
+          ],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "media_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "availability_generation",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "requested_audio_track",
+              "key": 3,
+              "type": "nullable_bytes16",
+              "required": true
+            },
+            {
+              "name": "requested_subtitle_track",
+              "key": 4,
+              "type": "nullable_bytes16",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "open_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "transport",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "expires_boottime_ns",
+              "key": 2,
+              "type": "nullable_uint",
+              "required": true
+            },
+            {
+              "name": "seekability",
+              "key": 3,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "source_private_record",
+              "key": 4,
+              "type": "record",
+              "required": false
+            }
+          ]
+        },
+        {
+          "name": "WATCH",
+          "code": 5,
+          "grant": "media.library.browse",
+          "cancellable": true,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "after_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "library_revision",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "name": "LIBRARY_CHANGED",
+          "code": 1,
+          "body": [
+            {
+              "name": "library_revision",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "change_class",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "SOURCE_STATE_CHANGED",
+          "code": 2,
+          "body": [
+            {
+              "name": "library_revision",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "source_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "availability",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "RESNAPSHOT_REQUIRED",
+          "code": 3,
+          "body": [
+            {
+              "name": "library_revision",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "guide.media.session",
+      "major": 1,
+      "minor": 0,
+      "endpoint": "/run/guideos/brokers/media-session.sock",
+      "operations": [
+        {
+          "name": "OPEN",
+          "code": 1,
+          "grant": "media.session.control",
+          "cancellable": true,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "media_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "availability_generation",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "requested_audio_track",
+              "key": 3,
+              "type": "nullable_bytes16",
+              "required": true
+            },
+            {
+              "name": "requested_subtitle_track",
+              "key": 4,
+              "type": "nullable_bytes16",
+              "required": true
+            },
+            {
+              "name": "requested_output",
+              "key": 5,
+              "type": "nullable_bytes16",
+              "required": true
+            },
+            {
+              "name": "resume_position_ms",
+              "key": 6,
+              "type": "nullable_uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "session_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "state",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "PLAY",
+          "code": 2,
+          "grant": "media.session.control",
+          "cancellable": true,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "session_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "expected_state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "state",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "position_ms",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "PAUSE",
+          "code": 3,
+          "grant": "media.session.control",
+          "cancellable": true,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "session_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "expected_state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "state",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "position_ms",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "SEEK",
+          "code": 4,
+          "grant": "media.session.control",
+          "cancellable": true,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "session_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "expected_state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "target_position_ms",
+              "key": 3,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "state",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "position_ms",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "SELECT_AUDIO",
+          "code": 5,
+          "grant": "media.session.control",
+          "cancellable": true,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "session_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "expected_state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "track_id",
+              "key": 3,
+              "type": "bytes16",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "state",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "position_ms",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "SELECT_SUBTITLE",
+          "code": 6,
+          "grant": "media.session.control",
+          "cancellable": true,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "session_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "expected_state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "track_id",
+              "key": 3,
+              "type": "nullable_bytes16",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "state",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "position_ms",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "SET_OUTPUT",
+          "code": 7,
+          "grant": "media.session.control",
+          "cancellable": true,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "session_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "expected_state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "output_id",
+              "key": 3,
+              "type": "bytes16",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "state",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "position_ms",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "CHECKPOINT",
+          "code": 8,
+          "grant": "media.session.control",
+          "cancellable": true,
+          "retry": "none",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "session_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "expected_state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "state",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "position_ms",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "STOP",
+          "code": 9,
+          "grant": "media.session.control",
+          "cancellable": true,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "session_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "expected_state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "state",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "position_ms",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "SNAPSHOT",
+          "code": 10,
+          "grant": "media.session.control",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "session_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "state",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "position_ms",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "duration_ms",
+              "key": 3,
+              "type": "nullable_uint",
+              "required": true
+            },
+            {
+              "name": "buffered_ms",
+              "key": 4,
+              "type": "nullable_uint",
+              "required": true
+            },
+            {
+              "name": "selected_audio_track",
+              "key": 5,
+              "type": "nullable_bytes16",
+              "required": true
+            },
+            {
+              "name": "selected_subtitle_track",
+              "key": 6,
+              "type": "nullable_bytes16",
+              "required": true
+            },
+            {
+              "name": "selected_output",
+              "key": 7,
+              "type": "nullable_bytes16",
+              "required": true
+            },
+            {
+              "name": "source_class",
+              "key": 8,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "failure_class",
+              "key": 9,
+              "type": "nullable_uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "WATCH",
+          "code": 11,
+          "grant": "media.session.control",
+          "cancellable": true,
+          "retry": "idempotent",
+          "descriptors": [],
+          "arguments": [
+            {
+              "name": "grant_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "session_id",
+              "key": 1,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "after_state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "state_revision",
+              "key": 0,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "name": "STATE_CHANGED",
+          "code": 1,
+          "body": [
+            {
+              "name": "session_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "state",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "POSITION_CHANGED",
+          "code": 2,
+          "body": [
+            {
+              "name": "session_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "position_ms",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "BUFFERING_CHANGED",
+          "code": 3,
+          "body": [
+            {
+              "name": "session_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "buffered_ms",
+              "key": 1,
+              "type": "nullable_uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "TRACKS_CHANGED",
+          "code": 4,
+          "body": [
+            {
+              "name": "session_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "SOURCE_LOST",
+          "code": 5,
+          "body": [
+            {
+              "name": "session_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "failure_class",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "OUTPUT_LOST",
+          "code": 6,
+          "body": [
+            {
+              "name": "session_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "failure_class",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 2,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "RESNAPSHOT_REQUIRED",
+          "code": 7,
+          "body": [
+            {
+              "name": "session_id",
+              "key": 0,
+              "type": "bytes16",
+              "required": true
+            },
+            {
+              "name": "state_revision",
+              "key": 1,
+              "type": "uint",
+              "required": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "guide.installer.parser",
+      "major": 1,
+      "minor": 0,
+      "endpoint": "/run/guideos/installer/parser.sock",
+      "operations": [
+        {
+          "name": "VERIFY",
+          "code": 1,
+          "grant": "owner.installer.parser",
+          "cancellable": false,
+          "retry": "idempotent",
+          "descriptors": [
+            "read-only-regular-archive"
+          ],
+          "arguments": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ],
+          "result": [
+            {
+              "name": "record",
+              "key": 0,
+              "type": "bounded_json",
+              "required": true
+            }
+          ]
+        }
+      ],
+      "events": []
+    }
+  ]
+}

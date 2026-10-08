@@ -164,6 +164,37 @@ class NodeClient:
     def android_status(self) -> dict:
         return self._request("/guide/v1/android/status")
 
+    def semiotic_submit(self, text: str, instruction: str = "Summarize the supplied text.",
+                        deadline_ms: int = 300_000,
+                        max_output_chars: int = 4000) -> dict:
+        if not isinstance(text, str) or not 1 <= len(text) <= 32_000:
+            raise NodeLinkError("ENGINE INPUT MUST CONTAIN 1 TO 32000 CHARACTERS")
+        if not isinstance(instruction, str) or not 1 <= len(instruction) <= 1000:
+            raise NodeLinkError("ENGINE INSTRUCTION IS INVALID")
+        value = {
+            "text": text,
+            "instruction": instruction,
+            "source_label": "Selected on Deck",
+            "deadline_ms": min(300_000, max(1, int(deadline_ms))),
+            "max_output_chars": min(4000, max(1, int(max_output_chars))),
+        }
+        result = self._request("/guide/v1/semiotic/jobs", "POST", value)
+        if (result.get("protocol") != "guide-se/0" or
+                not isinstance(result.get("job_id"), str) or
+                not re.fullmatch(r"[0-9a-f]{32}", result["job_id"])):
+            raise NodeLinkError("NODE RETURNED AN INVALID ENGINE JOB")
+        return result
+
+    def semiotic_job(self, job_id: str) -> dict:
+        if not isinstance(job_id, str) or not re.fullmatch(r"[0-9a-f]{32}", job_id):
+            raise NodeLinkError("ENGINE JOB ID IS INVALID")
+        return self._request(f"/guide/v1/semiotic/jobs/{job_id}")
+
+    def semiotic_cancel(self, job_id: str) -> dict:
+        if not isinstance(job_id, str) or not re.fullmatch(r"[0-9a-f]{32}", job_id):
+            raise NodeLinkError("ENGINE JOB ID IS INVALID")
+        return self._request(f"/guide/v1/semiotic/jobs/{job_id}", "DELETE")
+
     def applications(self) -> dict:
         return self._request("/guide/v1/applications")
 

@@ -1,5 +1,50 @@
 # Anbernic Failsafe Status
 
+## Latest seed — Debian diagnostic 1
+
+The first Debian test reached userspace but exposed missing display, GPU,
+joystick and radio dependencies. The corrected diagnostic 1 is now on the seed,
+with Linux `7.2.7-guide-debian1`. Full image readback verified SHA-256
+`4BECEA7B5AC00FFF162E6D4241816E2626D57D93FDD4C769336849CD411EDA05`.
+Physical acceptance of this second image is pending. See
+`ROCKNIX_ALIGNMENT_1.md` for the comparison, corrections and validation record.
+The first diagnostic image/reports and both recovery captures remain preserved.
+
+## First Debian diagnostic, 21 September 2026
+
+After the full backup below was completed, the seed was replaced with the
+minimal Debian ARM64 diagnostic image and Linux `7.2.7-guide-debian0`.
+Image size: 3,490,709,504 bytes. The entire written range was read back and
+matched SHA-256:
+`2D79860BA3E703F447F4749D62EBBDF777710D8F34FDDD591438A03D56A5AC44`.
+The old backup GPT at the card's end was cleared and checked separately.
+Evidence: `build/debian-minimal/flash-result.txt`.
+
+The card now contains a diagnostic system, not the earlier Guide application
+environment. The first physical test reached Debian and saved diagnostics;
+the user observed automatic power-off. Display, game controls and radios still
+need driver integration fixes. See
+`build/debian-minimal/hardware-tests/2026-09-21-first-boot/RESULT.md`. Both recovery
+captures below remain on the SSD unchanged.
+
+## Full seed backup — 21 September 2026
+
+Before the modern Linux rework, the complete current seed card was captured
+read-only to `E:\DGttG\private-recovery\guideos-seed-full-2026-09-21.img`.
+The matching `.txt` manifest records `CAPTURE_OK`, disk identity and all six
+partition boundaries. Size: 62,239,277,056 bytes, including partition metadata
+and space beyond the last partition. The saved-image SHA-256 matched a separate
+full-card reread:
+`133149EBF6410D17662EFA4E48856C91A9E4E12B9502836FEACBBD741CE72280`.
+
+An initial buffered-read failure at the card's end was resolved by reading the
+remaining bytes without read-ahead, followed by complete verification. The seed
+was not written during capture. This is a verified pre-rework capture, not a newly proven
+boot image: restore and physical boot testing of this backup remain unperformed.
+The earlier physically proven baseline below is retained separately.
+
+## Earlier physically proven baseline
+
 As of September 6, 2026, the working GuideOS seed has a verified read-only
 failsafe capture. The source card is the physically proven boot source; the
 capture covers every partition and all bytes through the end of the final

@@ -1,0 +1,31 @@
+[Unit]
+Description=Guide resident input control and diagnostic overlay
+After=local-fs.target systemd-udev-settle.service guide-boot-animation.service guide-shell.service
+Wants=systemd-udev-settle.service guide-diagnostics.service
+Wants=guide-resources.service
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/python3 /usr/lib/guideos/control/control_service.py
+ExecStopPost=/usr/bin/python3 /usr/lib/guideos/control/control_service.py --recover
+Environment=PYTHONPATH=/usr/lib/guideos/control/platform:/usr/lib/guideos/resources
+RuntimeDirectory=guideos-control
+RuntimeDirectoryMode=0755
+Restart=on-failure
+RestartSec=1
+TimeoutStopSec=8
+Nice=-5
+CPUWeight=1000
+MemoryHigh=64M
+MemoryMax=96M
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/run/guideos-control
+ReadWritePaths=-/sys/fs/cgroup/system.slice/guide-shell.service
+ReadWritePaths=-/sys/fs/cgroup/system.slice
+ReadWritePaths=-/sys/fs/cgroup/user.slice
+IPAddressDeny=any
+
+[Install]
+WantedBy=multi-user.target

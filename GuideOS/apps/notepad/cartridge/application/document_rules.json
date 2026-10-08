@@ -1,0 +1,8 @@
+{
+  "encoding": "UTF-8",
+  "lineEndings": "LF",
+  "maxCodePoints": 5120,
+  "maxBytes": 20480,
+  "maxInternalDrafts": 16,
+  "externalDocuments": false
+}

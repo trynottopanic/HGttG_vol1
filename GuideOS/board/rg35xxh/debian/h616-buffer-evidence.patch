@@ -1,0 +1,147 @@
+--- a/sound/soc/sunxi/sun4i-codec.c
++++ b/sound/soc/sunxi/sun4i-codec.c
+@@ -326,6 +326,9 @@
+ #define SUNIV_CODEC_ADC_DBG		(0x4c)
+ 
+ struct sun4i_codec {
++	spinlock_t probe_lock;
++	bool probe_armed;
++	u32 probe_values[11];
+ 	struct device	*dev;
+ 	struct regmap	*regmap;
+ 	struct clk	*clk_apb;
+@@ -343,6 +346,45 @@
+ 	struct snd_dmaengine_dai_dma_data	playback_dma_data;
+ };
+ 
++/* Owner-armed, one-shot aggregate of the first 4096 DMA-buffer bytes. */
++static void sun50i_h616_probe_buffer(struct sun4i_codec *scodec,
++				    struct snd_pcm_substream *substream)
++{
++	struct snd_pcm_runtime *runtime = substream->runtime;
++	unsigned long flags;
++	u32 hash = 2166136261U, count = 0, size, i;
++	u8 value;
++
++	spin_lock_irqsave(&scodec->probe_lock, flags);
++	if (!scodec->probe_armed) {
++		spin_unlock_irqrestore(&scodec->probe_lock, flags);
++		return;
++	}
++	scodec->probe_armed = false;
++	if (!runtime->dma_area || !runtime->dma_bytes) {
++		spin_unlock_irqrestore(&scodec->probe_lock, flags);
++		return;
++	}
++	size = min_t(size_t, runtime->dma_bytes, 4096);
++	for (i = 0; i < size; i++) {
++		value = READ_ONCE(runtime->dma_area[i]);
++		count += value != 0;
++		hash = (hash ^ value) * 16777619U;
++	}
++	scodec->probe_values[0] = 1;
++	scodec->probe_values[1] = size;
++	scodec->probe_values[2] = count;
++	scodec->probe_values[3] = hash & 0xffff;
++	scodec->probe_values[4] = hash >> 16;
++	scodec->probe_values[5] = runtime->sample_bits;
++	scodec->probe_values[6] = runtime->channels;
++	scodec->probe_values[7] = scodec->playback_dma_data.addr;
++	scodec->probe_values[8] = runtime->rate;
++	scodec->probe_values[9] = runtime->dma_bytes;
++	scodec->probe_values[10] = scodec->playback_dma_data.addr_width;
++	spin_unlock_irqrestore(&scodec->probe_lock, flags);
++}
++
+ static void sun4i_codec_start_playback(struct sun4i_codec *scodec)
+ {
+ 	/* Flush TX FIFO */
+@@ -380,6 +422,10 @@
+ {
+ 	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
+ 	struct sun4i_codec *scodec = snd_soc_card_get_drvdata(rtd->card);
++
++	if (cmd == SNDRV_PCM_TRIGGER_START &&
++	    substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
++		sun50i_h616_probe_buffer(scodec, substream);
+ 
+ 	switch (cmd) {
+ 	case SNDRV_PCM_TRIGGER_START:
+@@ -1900,7 +1946,69 @@
+ 			    SUN50I_DAC_DG_REG, 9,
+ 			    sun50i_h616_pattern_text);
+ 
++static int sun50i_h616_probe_get(struct snd_kcontrol *control,
++				struct snd_ctl_elem_value *value)
++{
++	struct snd_soc_component *component = snd_kcontrol_chip(control);
++	struct sun4i_codec *scodec = snd_soc_card_get_drvdata(component->card);
++
++	value->value.integer.value[0] = READ_ONCE(scodec->probe_armed);
++	return 0;
++}
++
++static int sun50i_h616_probe_put(struct snd_kcontrol *control,
++				struct snd_ctl_elem_value *value)
++{
++	struct snd_soc_component *component = snd_kcontrol_chip(control);
++	struct sun4i_codec *scodec = snd_soc_card_get_drvdata(component->card);
++	unsigned long flags;
++	long armed = value->value.integer.value[0];
++
++	if (armed != 0 && armed != 1)
++		return -EINVAL;
++	spin_lock_irqsave(&scodec->probe_lock, flags);
++	scodec->probe_armed = armed;
++	if (armed)
++		memset(scodec->probe_values, 0, sizeof(scodec->probe_values));
++	spin_unlock_irqrestore(&scodec->probe_lock, flags);
++	return 1;
++}
++
++static int sun50i_h616_probe_info(struct snd_kcontrol *control,
++				 struct snd_ctl_elem_info *info)
++{
++	info->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
++	info->count = 11;
++	info->value.integer.min = 0;
++	info->value.integer.max = 0x7fffffff;
++	return 0;
++}
++
++static int sun50i_h616_probe_values(struct snd_kcontrol *control,
++				   struct snd_ctl_elem_value *value)
++{
++	struct snd_soc_component *component = snd_kcontrol_chip(control);
++	struct sun4i_codec *scodec = snd_soc_card_get_drvdata(component->card);
++	unsigned long flags;
++	int i;
++
++	spin_lock_irqsave(&scodec->probe_lock, flags);
++	for (i = 0; i < ARRAY_SIZE(scodec->probe_values); i++)
++		value->value.integer.value[i] = scodec->probe_values[i];
++	spin_unlock_irqrestore(&scodec->probe_lock, flags);
++	return 0;
++}
++
+ static const struct snd_kcontrol_new sun50i_h616_codec_codec_controls[] = {
++	SOC_SINGLE_BOOL_EXT("DAC Buffer Probe", 0,
++			    sun50i_h616_probe_get, sun50i_h616_probe_put),
++	{
++		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
++		.name = "DAC Buffer Evidence",
++		.access = SNDRV_CTL_ELEM_ACCESS_READ,
++		.info = sun50i_h616_probe_info,
++		.get = sun50i_h616_probe_values,
++	},
+ 	SOC_ENUM("DAC Diagnostic Source", sun50i_h616_pattern_enum),
+ 	SOC_SINGLE_TLV("DAC Playback Volume", SUN4I_CODEC_DAC_DPC,
+ 		       SUN4I_CODEC_DAC_DPC_DVOL, 0x3f, 1,
+@@ -2375,6 +2483,7 @@
+ 		return -ENOMEM;
+ 
+ 	scodec->dev = &pdev->dev;
++	spin_lock_init(&scodec->probe_lock);
+ 
+ 	base = devm_platform_get_and_ioremap_resource(pdev, 0, &res);
+ 	if (IS_ERR(base))

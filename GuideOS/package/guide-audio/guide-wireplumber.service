@@ -1,0 +1,21 @@
+[Unit]
+Description=Guide local and Bluetooth audio endpoints
+Requires=guide-pipewire.service
+Wants=bluetooth.service
+After=guide-pipewire.service bluetooth.service
+
+[Service]
+User=guide-audio
+Group=audio
+SupplementaryGroups=bluetooth
+Environment=XDG_RUNTIME_DIR=/run/guide-audio
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/guide-audio/bus
+Environment=XDG_CONFIG_HOME=/etc/guideos/audio
+Environment=XDG_STATE_HOME=/var/lib/guideos-audio
+ExecStart=/usr/bin/wireplumber
+Restart=on-failure
+RestartSec=2
+StateDirectory=guideos-audio
+MemoryHigh=64M
+MemoryMax=128M
+TimeoutStopSec=3

@@ -1,0 +1,13 @@
+[Unit]
+Description=Recover interrupted Guide activation before starting the interface
+After=local-fs.target
+Before=guide-shell.service guide-deploy.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/lib/guideos/deploy/deploy_server.py recover
+RemainAfterExit=yes
+RuntimeDirectory=guideos-deploy
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+Environment=PYTHONDONTWRITEBYTECODE=1

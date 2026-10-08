@@ -1,5 +1,0 @@
-select disk 4
-detail disk
-select partition 1
-assign letter=Z
-exit

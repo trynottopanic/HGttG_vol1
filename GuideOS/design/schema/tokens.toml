@@ -1,0 +1,117 @@
+[schema]
+name = "Guide Design Tokens"
+version = 0
+theme = "paper-0"
+typography = "typography-0"
+
+[display]
+profile = "deck-640x480"
+width = 640
+height = 480
+
+[colors]
+paper = "#EFEDE1"
+ink = "#3A3B30"
+blue = "#446470"
+blue_light = "#91A7AE"
+rust = "#9D4E22"
+green = "#416F4B"
+danger = "#973930"
+panel = "#E7E4D7"
+video_dark = "#283334"
+video_field = "#E9E7DB"
+video_sun = "#F5F1E3"
+transport = "#252824"
+track = "#B8B8AE"
+white = "#F6F3E7"
+
+[spacing]
+unit = 4
+page_x = 16
+content_gap = 12
+inline_gap = 7
+
+[stroke]
+hairline = 1
+strong = 2
+
+[shape]
+button_height = 24
+button_radius = 12
+transport_radius = 3
+progress_radius = 4
+
+[fonts.serif.bold]
+production = ["NotoSerif-Bold.ttf"]
+reduced = ["DejaVuSerif-Bold.ttf"]
+preview = ["georgiab.ttf"]
+
+[fonts.sans.regular]
+production = ["NotoSans-Regular.ttf"]
+reduced = ["DejaVuSans.ttf"]
+preview = ["segoeui.ttf"]
+
+[fonts.sans.bold]
+production = ["NotoSans-Bold.ttf"]
+reduced = ["DejaVuSans-Bold.ttf"]
+preview = ["segoeuib.ttf"]
+
+[fonts.mono.regular]
+production = ["NotoSansMono-Regular.ttf"]
+reduced = ["DejaVuSansMono.ttf"]
+preview = ["consola.ttf"]
+
+[fonts.mono.bold]
+production = ["NotoSansMono-Bold.ttf"]
+reduced = ["DejaVuSansMono-Bold.ttf"]
+preview = ["consolab.ttf"]
+
+[typography.masthead]
+family = "serif"
+weight = "bold"
+size = 19
+
+[typography.screen_title]
+family = "sans"
+weight = "bold"
+size = 15
+
+[typography.section_title]
+family = "sans"
+weight = "bold"
+size = 15
+
+[typography.body]
+family = "sans"
+weight = "regular"
+size = 15
+
+[typography.body_strong]
+family = "sans"
+weight = "bold"
+size = 15
+
+[typography.control]
+family = "sans"
+weight = "regular"
+size = 12
+
+[typography.control_strong]
+family = "sans"
+weight = "bold"
+size = 12
+
+[typography.metadata]
+family = "sans"
+weight = "regular"
+size = 12
+
+[typography.numeric]
+family = "mono"
+weight = "regular"
+size = 12
+
+[typography.display_value]
+family = "mono"
+weight = "bold"
+size = 22

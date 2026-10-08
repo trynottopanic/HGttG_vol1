@@ -1,0 +1,146 @@
+From 6ab710f23ac10ae6a75cda00c355de34e920c2c7 Mon Sep 17 00:00:00 2001
+From: GuideOS Project <guideos@localhost>
+Date: Mon, 21 Sep 2026 08:00:00 -0400
+Subject: [PATCH] framebuffer: make Deck text controls contextual
+
+Keep the browser's on-screen keyboard controllable without accidentally
+closing the browser.  B and Y delete while the keyboard is open, X inserts a
+space, Select dismisses the keyboard, and B retains its exit behavior outside
+text entry.
+
+---
+ libnsfb/src/surface/sdl.c               | 27 +++++++++++++-------------
+ netsurf/frontends/framebuffer/fbtk.h    |  2 ++
+ netsurf/frontends/framebuffer/fbtk/osk.c| 29 ++++++++++++++++++---------
+ netsurf/frontends/framebuffer/gui.c     | 16 ++++++++++++++++
+ 4 files changed, 49 insertions(+), 25 deletions(-)
+
+--- a/libnsfb/src/surface/sdl.c
++++ b/libnsfb/src/surface/sdl.c
+@@ -589,12 +589,14 @@ static enum nsfb_key_code_e sdl_joystick_button(unsigned button)
+ {
+     switch (button) {
+     case 0: return NSFB_KEY_MOUSE_1; /* A: open/click */
++    case 1: return NSFB_KEY_F11;     /* B: backspace in text, exit otherwise */
+     case 2: return NSFB_KEY_F12;     /* X: bounded Guide action */
+-    case 3: return NSFB_KEY_ESCAPE;  /* Y: stop/back */
++    case 3: return NSFB_KEY_BACKSPACE; /* Y: delete in text */
+     case 4: return NSFB_KEY_PAGEUP;
+     case 5: return NSFB_KEY_PAGEDOWN;
+     case 6: return NSFB_KEY_HOME;
+     case 7: return NSFB_KEY_END;
++    case 8: return NSFB_KEY_F10;     /* Select: dismiss keyboard */
+     case 9: return NSFB_KEY_RETURN;  /* Start: open focused item */
+     default: return NSFB_KEY_UNKNOWN;
+     }
+@@ -776,20 +778,15 @@ static bool sdl_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
+         break;
+     }
+ 
+-    case SDL_JOYBUTTONDOWN:
+-        /* B is intentionally handled as control, not as page input. */
+-        if (sdlevent.jbutton.button == 1) {
+-            event->type = NSFB_EVENT_CONTROL;
+-            event->value.controlcode = NSFB_CONTROL_QUIT;
+-        } else {
+-            enum nsfb_key_code_e key =
+-                sdl_joystick_button(sdlevent.jbutton.button);
+-            if (key != NSFB_KEY_UNKNOWN) {
+-                event->type = NSFB_EVENT_KEY_DOWN;
+-                event->value.keycode = key;
+-            }
++    case SDL_JOYBUTTONDOWN: {
++        enum nsfb_key_code_e key =
++            sdl_joystick_button(sdlevent.jbutton.button);
++        if (key != NSFB_KEY_UNKNOWN) {
++            event->type = NSFB_EVENT_KEY_DOWN;
++            event->value.keycode = key;
+         }
+         break;
++    }
+ 
+     case SDL_JOYBUTTONUP: {
+         enum nsfb_key_code_e key =
+--- a/netsurf/frontends/framebuffer/fbtk.h
++++ b/netsurf/frontends/framebuffer/fbtk.h
+@@ -608,5 +608,7 @@ void fbtk_enable_oskb(fbtk_widget_t *widget);
+  * show the osk.
+  */
+ void map_osk(void);
++void unmap_osk(void);
++bool osk_is_mapped(void);
+ 
+ #endif
+--- a/netsurf/frontends/framebuffer/fbtk/osk.c
++++ b/netsurf/frontends/framebuffer/fbtk/osk.c
+@@ -116,15 +116,7 @@ osk_close(fbtk_widget_t *widget, fbtk_callback_info *cbi)
+ 	if (cbi->event->type != NSFB_EVENT_KEY_UP)
+ 		return 0;
+ 
+-	if (osk_shift_latched) {
+-		nsfb_event_t event;
+-		event.type = NSFB_EVENT_KEY_UP;
+-		event.value.keycode = NSFB_KEY_LSHIFT;
+-		fbtk_input(widget, &event);
+-		osk_shift_latched = false;
+-	}
+-
+-	fbtk_set_mapping(osk, false);
++	unmap_osk();
+ 
+ 	return 0;
+ }
+@@ -213,6 +205,25 @@ map_osk(void)
+ 	fbtk_set_mapping(osk, true);
+ }
+ 
++void
++unmap_osk(void)
++{
++	if (osk_shift_latched) {
++		nsfb_event_t event;
++		event.type = NSFB_EVENT_KEY_UP;
++		event.value.keycode = NSFB_KEY_LSHIFT;
++		fbtk_input(osk, &event);
++		osk_shift_latched = false;
++	}
++	fbtk_set_mapping(osk, false);
++}
++
++bool
++osk_is_mapped(void)
++{
++	return osk != NULL && osk->mapped;
++}
++
+ /*
+  * Local Variables:
+  * c-basic-offset:8
+--- a/netsurf/frontends/framebuffer/gui.c
++++ b/netsurf/frontends/framebuffer/gui.c
+@@ -863,7 +863,23 @@ fb_browser_window_input(fbtk_widget_t *widget, fbtk_callback_info *cbi)
+ 	case NSFB_EVENT_KEY_DOWN:
+ 		switch (cbi->event->value.keycode) {
+ 
++		case NSFB_KEY_F10:
++			if (osk_is_mapped())
++				unmap_osk();
++			break;
++
++		case NSFB_KEY_F11:
++			if (osk_is_mapped())
++				browser_window_key_press(gw->bw, NS_KEY_DELETE_LEFT);
++			else
++				fb_complete = true;
++			break;
++
+ 		case NSFB_KEY_F12: {
++			if (osk_is_mapped()) {
++				browser_window_key_press(gw->bw, ' ');
++				break;
++			}
+ 			const char *current = nsurl_access(
+ 				browser_window_access_url(gw->bw));
+ 			if (strncmp(current, "http://127.0.0.1:8765/", 22) == 0) {
+-- 
+2.43.0

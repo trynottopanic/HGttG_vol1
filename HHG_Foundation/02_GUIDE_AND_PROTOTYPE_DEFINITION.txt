@@ -32,6 +32,23 @@ The persistent platform is the person. Processors, displays, applications,
 models, services, employers, and hosting providers are resources that the
 person may attach, authorize, replace, or leave.
 
+1.1 THE NOOSPHERE AND CYBERSPACE
+--------------------------------
+
+For the Third Way, the noosphere is the collection of signals and forces around
+Earth that record, carry, or transmit information. Human writing is one form of
+this informational field, as are the electromagnetic waves used in modern
+telecommunications. Digital records, broadcasts, physical media, networks, and
+human communication can all form paths through it.
+
+Guide software and devices should help a person discover, understand, create,
+and make use of these informational paths in as many practical forms as they
+choose. This does not grant a program hidden access to every signal or source:
+each connection remains subject to the person's choices, available hardware,
+capabilities, law, consent, safety, and the limits of the medium. Cyberspace is
+the human-made, navigable space created when people use technology to connect
+those informational paths, records, tools, and one another.
+
 2. CONSTITUTIONAL PRINCIPLE
 ---------------------------
 

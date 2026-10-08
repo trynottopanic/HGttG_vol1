@@ -1,0 +1,1 @@
+{"dataSchema":1,"display":[640,480],"health":"isolated-ready-checkpoint-v0","icon":"assets/icon.png","interfaceMajor":1,"lifecycle":["ready","checkpoint","stop"],"memoryMinimumBytes":50331648,"memoryPeakBytes":67108864,"offline":true,"optionalCapabilities":[],"privateBytes":524288,"profile":"guide.application.v0","runtime":"guide.python-application","temporaryBytes":131072}

@@ -1,0 +1,28 @@
+[Unit]
+Description=GuideOS prebaked eclipse boot animation
+Documentation=file:/usr/share/doc/guideos-boot-animation/README.md
+After=local-fs.target systemd-udev-settle.service
+Wants=systemd-udev-settle.service
+Conflicts=getty@tty1.service guide-diagnostic.service
+ConditionPathExists=/dev/dri
+RefuseManualStart=yes
+
+[Service]
+Type=notify
+NotifyAccess=main
+RuntimeDirectory=guideos-boot-animation
+RuntimeDirectoryMode=0700
+ExecStartPre=/usr/bin/python3 /usr/lib/guideos/boot-animation/guide_boot_console.py acquire
+ExecStart=/usr/bin/python3 /usr/lib/guideos/boot-animation/guide_boot_runner.py --initialization 12 --playback 9.5 /usr/lib/guideos/boot-animation/guide-boot-animation --duration 7.5 --max-runtime 9.5
+ExecStopPost=/usr/bin/python3 /usr/lib/guideos/boot-animation/guide_boot_console.py handoff
+TimeoutStartSec=26s
+TimeoutStopSec=12s
+KillSignal=SIGTERM
+NoNewPrivileges=yes
+PrivateTmp=yes
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

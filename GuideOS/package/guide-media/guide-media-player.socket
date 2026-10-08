@@ -1,0 +1,11 @@
+[Unit]
+Description=Guide native media system control
+[Socket]
+ListenSequentialPacket=/run/guideos-player/control.sock
+SocketMode=0600
+SocketUser=root
+DirectoryMode=0755
+Service=guide-media-player.service
+RemoveOnStop=yes
+[Install]
+WantedBy=sockets.target

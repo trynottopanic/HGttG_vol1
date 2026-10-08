@@ -1,0 +1,9 @@
+[Unit]
+Description=Restore Guide after its activation worker fails
+After=guide-deploy-apply.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/lib/guideos/deploy/deploy_server.py rescue
+TimeoutStartSec=90
+Environment=PYTHONDONTWRITEBYTECODE=1

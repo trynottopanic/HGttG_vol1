@@ -1,0 +1,9 @@
+[Unit]
+Description=Guide bounded cartridge parser socket
+[Socket]
+ListenSequentialPacket=/run/guideos/installer/parser.sock
+SocketMode=0600
+DirectoryMode=0755
+RemoveOnStop=yes
+[Install]
+WantedBy=sockets.target

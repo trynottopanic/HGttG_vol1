@@ -1,0 +1,16 @@
+[Unit]
+Description=Guide audio private session bus
+After=local-fs.target guide-shell.service
+
+[Service]
+Type=exec
+User=guide-audio
+Group=audio
+RuntimeDirectory=guide-audio
+RuntimeDirectoryMode=0750
+ExecStart=/usr/bin/dbus-daemon --session --nofork --address=unix:path=/run/guide-audio/bus
+ExecStartPost=/usr/bin/python3 /usr/lib/guideos/audio/audio_wait_bus.py
+TimeoutStartSec=7
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=3

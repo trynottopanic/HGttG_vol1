@@ -1,0 +1,175 @@
+From 3b1290d7c274c0d0e590989659985b06997b2e58 Mon Sep 17 00:00:00 2001
+From: GuideOS Project <guideos@localhost>
+Date: Thu, 10 Sep 2026 23:30:00 -0400
+Subject: [PATCH] libnsfb: add Deck joystick controls to SDL surface
+
+The RG35XX H exposes its built-in controls as an SDL joystick rather than a
+legacy mouse or keyboard. Allow the framebuffer frontend to be navigated
+without synthesising an operating-system input device. The east face button
+is an unconditional browser exit so the Guide shell can always reclaim the
+display.
+
+---
+ libnsfb/src/surface/sdl.c | 102 +++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 100 insertions(+), 2 deletions(-)
+
+diff --git a/libnsfb/src/surface/sdl.c b/libnsfb/src/surface/sdl.c
+index a02d842..4919dca 100644
+--- a/libnsfb/src/surface/sdl.c
++++ b/libnsfb/src/surface/sdl.c
+@@ -326,6 +326,10 @@ enum nsfb_key_code_e sdl_nsfb_map[] = {
+ };
+ 
+ 
++static SDL_Joystick *sdl_joystick;
++static int sdl_joystick_x;
++static int sdl_joystick_y;
++
+ static void
+ set_palette(nsfb_t *nsfb)
+ {
+@@ -437,7 +441,7 @@ static int sdl_initialise(nsfb_t *nsfb)
+         return -1;
+ 
+     /* initialise SDL library */
+-    if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) < 0 ) {
++    if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0 ) {
+         fprintf(stderr, "Unable to init SDL: %s\n", SDL_GetError());
+         return -1;
+     }
+@@ -485,12 +489,25 @@ static int sdl_initialise(nsfb_t *nsfb)
+     SDL_ShowCursor(SDL_DISABLE);
+     SDL_EnableKeyRepeat(300, 50);
+ 
++    sdl_joystick_x = nsfb->width / 2;
++    sdl_joystick_y = nsfb->height / 2;
++    sdl_joystick = NULL;
++    if (SDL_NumJoysticks() > 0) {
++        sdl_joystick = SDL_JoystickOpen(0);
++        if (sdl_joystick != NULL)
++            SDL_JoystickEventState(SDL_ENABLE);
++    }
++
+     return 0;
+ }
+ 
+ static int sdl_finalise(nsfb_t *nsfb)
+ {
+     nsfb=nsfb;
++    if (sdl_joystick != NULL) {
++        SDL_JoystickClose(sdl_joystick);
++        sdl_joystick = NULL;
++    }
+     SDL_Quit();
+     return 0;
+ }
+@@ -514,6 +531,40 @@ static uint32_t wakeeventtimer(uint32_t ival, void *param)
+     return 0;
+ }
+ 
++static enum nsfb_key_code_e sdl_joystick_button(unsigned button)
++{
++    switch (button) {
++    case 0: return NSFB_KEY_MOUSE_1; /* A: open/click */
++    case 2: return NSFB_KEY_TAB;     /* X: next focus */
++    case 3: return NSFB_KEY_ESCAPE;  /* Y: stop/back */
++    case 4: return NSFB_KEY_PAGEUP;
++    case 5: return NSFB_KEY_PAGEDOWN;
++    case 6: return NSFB_KEY_HOME;
++    case 7: return NSFB_KEY_END;
++    case 9: return NSFB_KEY_RETURN;  /* Start: open focused item */
++    default: return NSFB_KEY_UNKNOWN;
++    }
++}
++
++static int sdl_joystick_clamp(int value, int maximum)
++{
++    if (value < 0)
++        return 0;
++    if (value >= maximum)
++        return maximum - 1;
++    return value;
++}
++
++static void sdl_joystick_move(nsfb_t *nsfb, nsfb_event_t *event, int x, int y)
++{
++    sdl_joystick_x = sdl_joystick_clamp(sdl_joystick_x + x, nsfb->width);
++    sdl_joystick_y = sdl_joystick_clamp(sdl_joystick_y + y, nsfb->height);
++    event->type = NSFB_EVENT_MOVE_ABSOLUTE;
++    event->value.vector.x = sdl_joystick_x;
++    event->value.vector.y = sdl_joystick_y;
++    event->value.vector.z = 0;
++}
++
+ static bool sdl_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
+ {
+     int got_event;
+@@ -521,6 +571,4 @@ static bool sdl_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
+ 
+-    nsfb = nsfb; /* unused */
+-
+     if (timeout == 0) {
+         got_event = SDL_PollEvent(&sdlevent);
+     } else {
+@@ -614,6 +662,59 @@ static bool sdl_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
+ 	event->value.vector.z = 0;
+ 	break;
+ 
++    case SDL_JOYAXISMOTION:
++        if (sdlevent.jaxis.axis == 0) {
++            int amount = sdlevent.jaxis.value / 4096;
++            if (amount != 0)
++                sdl_joystick_move(nsfb, event, amount, 0);
++        } else if (sdlevent.jaxis.axis == 1) {
++            int amount = sdlevent.jaxis.value / 4096;
++            if (amount != 0)
++                sdl_joystick_move(nsfb, event, 0, amount);
++        }
++        break;
++
++    case SDL_JOYHATMOTION: {
++        int x = 0;
++        int y = 0;
++        if ((sdlevent.jhat.value & SDL_HAT_LEFT) != 0)
++            x = -24;
++        else if ((sdlevent.jhat.value & SDL_HAT_RIGHT) != 0)
++            x = 24;
++        if ((sdlevent.jhat.value & SDL_HAT_UP) != 0)
++            y = -24;
++        else if ((sdlevent.jhat.value & SDL_HAT_DOWN) != 0)
++            y = 24;
++        if (x != 0 || y != 0)
++            sdl_joystick_move(nsfb, event, x, y);
++        break;
++    }
++
++    case SDL_JOYBUTTONDOWN:
++        /* B is intentionally handled as control, not as page input. */
++        if (sdlevent.jbutton.button == 1) {
++            event->type = NSFB_EVENT_CONTROL;
++            event->value.controlcode = NSFB_CONTROL_QUIT;
++        } else {
++            enum nsfb_key_code_e key =
++                sdl_joystick_button(sdlevent.jbutton.button);
++            if (key != NSFB_KEY_UNKNOWN) {
++                event->type = NSFB_EVENT_KEY_DOWN;
++                event->value.keycode = key;
++            }
++        }
++        break;
++
++    case SDL_JOYBUTTONUP: {
++        enum nsfb_key_code_e key =
++            sdl_joystick_button(sdlevent.jbutton.button);
++        if (key != NSFB_KEY_UNKNOWN) {
++            event->type = NSFB_EVENT_KEY_UP;
++            event->value.keycode = key;
++        }
++        break;
++    }
++
+     case SDL_QUIT:
+ 	event->type = NSFB_EVENT_CONTROL;
+ 	event->value.controlcode = NSFB_CONTROL_QUIT;
+-- 
+2.43.0

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Keep the installed Python modules private to Guide Wikipedia.
+exec env PYTHONPATH=/usr/lib/guideos/wikipedia \
+    /usr/bin/python3 /usr/lib/guideos/wikipedia/guide_wikipedia_netsurf.py "$@"

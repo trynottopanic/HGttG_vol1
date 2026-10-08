@@ -1,0 +1,49 @@
+From 6ee7d253541ba54d46f25fb0a0492383592258a8 Mon Sep 17 00:00:00 2001
+From: GuideOS Project <guideos@localhost>
+Date: Mon, 21 Sep 2026 10:00:00 -0400
+Subject: [PATCH] framebuffer: map RG35XX H menu aliases
+
+The vendor controller reports Select and Start as the L2/R2 button slots on
+the prototype.  Accept both those slots and the standard SDL Select/Start
+slots.  Treat Start as an explicit browser newline/submit action and close the
+on-screen keyboard after it is delivered.
+
+---
+ libnsfb/src/surface/sdl.c           | 8 ++++----
+ netsurf/frontends/framebuffer/gui.c | 6 ++++++
+ 2 files changed, 10 insertions(+), 4 deletions(-)
+
+--- a/libnsfb/src/surface/sdl.c
++++ b/libnsfb/src/surface/sdl.c
+@@ -595,10 +595,10 @@ static enum nsfb_key_code_e sdl_joystick_button(unsigned button)
+     case 3: return NSFB_KEY_BACKSPACE; /* Y: delete in text */
+     case 4: return NSFB_KEY_PAGEUP;
+     case 5: return NSFB_KEY_PAGEDOWN;
+-    case 6: return NSFB_KEY_HOME;
+-    case 7: return NSFB_KEY_END;
+-    case 8: return NSFB_KEY_F10;     /* Select: dismiss keyboard */
+-    case 9: return NSFB_KEY_RETURN;  /* Start: open focused item */
++    case 6: return NSFB_KEY_F10;     /* vendor Select alias */
++    case 7: return NSFB_KEY_RETURN;  /* vendor Start alias */
++    case 8: return NSFB_KEY_F10;     /* standard Select */
++    case 9: return NSFB_KEY_RETURN;  /* standard Start */
+     default: return NSFB_KEY_UNKNOWN;
+     }
+ }
+--- a/netsurf/frontends/framebuffer/gui.c
++++ b/netsurf/frontends/framebuffer/gui.c
+@@ -868,6 +868,12 @@ fb_browser_window_input(fbtk_widget_t *widget, fbtk_callback_info *cbi)
+ 				unmap_osk();
+ 			break;
+ 
++		case NSFB_KEY_RETURN:
++			browser_window_key_press(gw->bw, NS_KEY_NL);
++			if (osk_is_mapped())
++				unmap_osk();
++			break;
++
+ 		case NSFB_KEY_F11:
+ 			if (osk_is_mapped())
+ 				browser_window_key_press(gw->bw, NS_KEY_DELETE_LEFT);
+-- 
+2.43.0

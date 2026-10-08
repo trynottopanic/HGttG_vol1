@@ -1,0 +1,11 @@
+[Unit]
+Description=Recover interrupted Guide application installation
+After=guide-supervisor0.service
+Before=guide-installer.service guide-shell.service
+Requires=guide-supervisor0.service
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I /usr/lib/guideos/installer/guide_install_recovery.py
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

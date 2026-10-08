@@ -1,0 +1,13 @@
+[Unit]
+Description=Guide bounded direct speaker probe
+After=guide-deploy.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/lib/guideos/deploy/deploy_board_diagnostics.py probe
+ExecStopPost=/usr/bin/python3 /usr/lib/guideos/deploy/deploy_board_diagnostics.py restore
+TimeoutStartSec=60
+TimeoutStopSec=35
+KillMode=control-group
+UMask=0077
+Environment=PYTHONDONTWRITEBYTECODE=1

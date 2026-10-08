@@ -1,0 +1,31 @@
+[Unit]
+Description=Guide nearby radio observations and network diagnostic jobs
+After=NetworkManager.service bluetooth.service
+Wants=NetworkManager.service bluetooth.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -B /usr/lib/guideos/connectivity/guide_nearby.py
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=5s
+RuntimeDirectory=guideos-nearby
+RuntimeDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_KILL
+TasksMax=8
+MemoryMax=96M
+CPUQuota=25%
+Nice=10
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

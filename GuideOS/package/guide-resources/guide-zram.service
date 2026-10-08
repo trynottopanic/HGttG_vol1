@@ -1,0 +1,15 @@
+[Unit]
+Description=Guide bounded compressed RAM swap
+After=systemd-modules-load.service
+Before=guide-resources.service guide-shell.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/lib/guideos/resources/zram_setup.py
+RemainAfterExit=yes
+TimeoutStartSec=20
+MemoryMax=32M
+TasksMax=8
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,58 @@
+From 87d812a89497621d5da67bd64f640124f7789c42 Mon Sep 17 00:00:00 2001
+From: GuideOS Project <guideos@localhost>
+Date: Sat, 12 Sep 2026 10:00:00 -0400
+Subject: [PATCH] framebuffer: give X a bounded Guide action
+
+Reserve the Deck X button as a Guide-specific browser action.  In the
+loopback-only Wikipedia reader it opens the consent page for the current
+article's Semiotic Engine summary.  On general web pages the key is ignored,
+so arbitrary sites cannot claim this privileged action.
+
+---
+ libnsfb/src/surface/sdl.c           | 2 +-
+ netsurf/frontends/framebuffer/gui.c | 18 ++++++++++++++++++
+ 2 files changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/libnsfb/src/surface/sdl.c b/libnsfb/src/surface/sdl.c
+index bf64a34..8b156d1 100644
+--- a/libnsfb/src/surface/sdl.c
++++ b/libnsfb/src/surface/sdl.c
+@@ -574,6 +574,6 @@ static enum nsfb_key_code_e sdl_joystick_button(unsigned button)
+     switch (button) {
+     case 0: return NSFB_KEY_MOUSE_1; /* A: open/click */
+-    case 2: return NSFB_KEY_TAB;     /* X: next focus */
++    case 2: return NSFB_KEY_F12;     /* X: bounded Guide action */
+     case 3: return NSFB_KEY_ESCAPE;  /* Y: stop/back */
+     case 4: return NSFB_KEY_PAGEUP;
+     case 5: return NSFB_KEY_PAGEDOWN;
+diff --git a/netsurf/frontends/framebuffer/gui.c b/netsurf/frontends/framebuffer/gui.c
+index 8883327..ed03e52 100644
+--- a/netsurf/frontends/framebuffer/gui.c
++++ b/netsurf/frontends/framebuffer/gui.c
+@@ -866,6 +866,24 @@ fb_browser_window_input(fbtk_widget_t *widget, fbtk_callback_info *cbi)
+ 	case NSFB_EVENT_KEY_DOWN:
+ 		switch (cbi->event->value.keycode) {
+ 
++		case NSFB_KEY_F12: {
++			const char *current = nsurl_access(
++				browser_window_access_url(gw->bw));
++			if (strncmp(current, "http://127.0.0.1:8765/", 22) == 0) {
++				nsurl *summary_url;
++				nserror error = nsurl_create(
++					"http://127.0.0.1:8765/guide/se",
++					&summary_url);
++				if (error == NSERROR_OK) {
++					browser_window_navigate(gw->bw, summary_url,
++						NULL, BW_NAVIGATE_HISTORY,
++						NULL, NULL, NULL);
++					nsurl_unref(summary_url);
++				}
++			}
++			break;
++		}
++
+ 		case NSFB_KEY_DELETE:
+ 			browser_window_key_press(gw->bw, NS_KEY_DELETE_RIGHT);
+ 			break;
+-- 
+2.43.0

@@ -1,0 +1,53 @@
+#!/bin/sh
+# First general GuideOS web browser: a small Guide-owned home page and the
+# existing controller-aware NetSurf runtime.
+set -u
+
+app=/usr/lib/guideos/apps/browser-0.1
+browser=/usr/lib/guideos/netsurf/netsurf-fb
+runtime=/usr/lib/guideos/netsurf/runtime
+log=/data/guideos/web-browser.log
+home_pid=
+browser_pid=
+start=${1:-http://127.0.0.1:8766/}
+
+cleanup() {
+    if [ -n "${browser_pid}" ]; then kill "${browser_pid}" 2>/dev/null || true; wait "${browser_pid}" 2>/dev/null || true; fi
+    if [ -n "${home_pid}" ]; then kill "${home_pid}" 2>/dev/null || true; wait "${home_pid}" 2>/dev/null || true; fi
+}
+trap cleanup EXIT INT TERM HUP
+
+mkdir -p /data/guideos /data/guideos/web-browser
+export HOME=/data/guideos/web-browser
+export PYTHONPATH="${app}:/usr/lib/guideos/apps/wikipedia-0.3/runtime/python3.12/lib-dynload"
+export LD_LIBRARY_PATH="/usr/lib/guideos/apps/wikipedia-0.3/runtime/lib"
+export SSL_CERT_FILE="/usr/lib/guideos/apps/wikipedia-0.3/runtime/certs/ca-certificates.crt"
+export SDL_NOMOUSE=1
+
+ip link set dev lo up || exit 1
+if ! ip -4 address show dev lo | grep -q '127\.0\.0\.1/8'; then
+    ip address add 127.0.0.1/8 dev lo || exit 1
+fi
+
+/usr/bin/python3 "${app}/guide_web_home.py" --port 8766 >"${log}" 2>&1 &
+home_pid=$!
+attempt=0
+while [ "${attempt}" -lt 30 ]; do
+    if wget -q -O /dev/null http://127.0.0.1:8766/health; then break; fi
+    kill -0 "${home_pid}" 2>/dev/null || exit 1
+    attempt=$((attempt + 1)); sleep 0.1
+done
+[ "${attempt}" -lt 30 ] || exit 1
+
+"${runtime}/libc.so" --library-path "${runtime}" "${browser}" \
+    --ca_bundle "${SSL_CERT_FILE}" \
+    --fb_face_sans_serif /usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf \
+    --fb_face_sans_serif_bold /usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf \
+    --fb_face_sans_serif_italic /usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf \
+    --fb_face_sans_serif_italic_bold /usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf \
+    --fb_osk true -f sdl -b 32 -w 640 -h 480 "${start}" >>"${log}" 2>&1 &
+browser_pid=$!
+wait "${browser_pid}"
+status=$?
+browser_pid=
+exit "${status}"

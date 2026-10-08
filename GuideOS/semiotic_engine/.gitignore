@@ -1,0 +1,7 @@
+models/*.gguf
+runtime/downloads/
+runtime/llama-*/
+*connection.json
+*connection.new
+build/
+dist/

@@ -1,8 +1,0 @@
-BEFORE IsOffline=False IsReadOnly=False Partitions=0
-PROBE_FAILED Not Supported
- 
-Extended information:
-Removable media cannot be set to offline.
- 
-
-Activity ID: {f1eb1c72-b7f3-432e-8ee6-c46243041740}

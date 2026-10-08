@@ -1,0 +1,14 @@
+[Unit]
+Description=GuideOS boot evidence after local storage is ready
+After=local-fs.target systemd-journal-flush.service
+Before=guide-shell.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/echo GUIDE_BOOT_STAGE local-storage-and-journal-ready
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=5s
+
+[Install]
+WantedBy=multi-user.target

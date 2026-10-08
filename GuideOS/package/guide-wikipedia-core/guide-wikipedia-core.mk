@@ -7,7 +7,7 @@
 GUIDE_WIKIPEDIA_CORE_SITE = $(BR2_EXTERNAL_GUIDE_OS_PATH)/apps/wikipedia
 GUIDE_WIKIPEDIA_CORE_SITE_METHOD = local
 GUIDE_WIKIPEDIA_CORE_LICENSE = AGPL-3.0-or-later
-GUIDE_WIKIPEDIA_CORE_DEPENDENCIES = python3 ca-certificates
+GUIDE_WIKIPEDIA_CORE_DEPENDENCIES = python3 ca-certificates netsurf
 
 define GUIDE_WIKIPEDIA_CORE_INSTALL_TARGET_CMDS
 	$(INSTALL) -d -m 0755 $(TARGET_DIR)/usr/lib/guideos/wikipedia
@@ -21,8 +21,14 @@ define GUIDE_WIKIPEDIA_CORE_INSTALL_TARGET_CMDS
 		$(TARGET_DIR)/usr/lib/guideos/wikipedia/
 	$(INSTALL) -m 0644 $(@D)/guide_wikipedia_bridge.py \
 		$(TARGET_DIR)/usr/lib/guideos/wikipedia/
+	$(INSTALL) -m 0644 $(@D)/guide_wikipedia_html.py \
+		$(TARGET_DIR)/usr/lib/guideos/wikipedia/
+	$(INSTALL) -m 0644 $(@D)/guide_wikipedia_netsurf.py \
+		$(TARGET_DIR)/usr/lib/guideos/wikipedia/
 	$(INSTALL) -D -m 0755 $(@D)/guide_wikipedia_client.py \
 		$(TARGET_DIR)/usr/bin/guide-wikipedia-data
+	$(INSTALL) -D -m 0755 $(@D)/guide-wikipedia-web \
+		$(TARGET_DIR)/usr/bin/guide-wikipedia-web
 endef
 
 $(eval $(generic-package))

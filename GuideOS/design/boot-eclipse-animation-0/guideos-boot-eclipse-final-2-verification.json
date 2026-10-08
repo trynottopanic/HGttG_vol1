@@ -1,0 +1,20 @@
+{
+  "approved_corona": "corona-draft-02",
+  "frames": 75,
+  "fps": 10,
+  "duration_ms": 7500,
+  "corona_start_s": 1.5,
+  "final_O_s": 5.8,
+  "background_source_pixel_match": true,
+  "all_rgb565_frames_match": true,
+  "final_corona_stable": true,
+  "s_x": 432,
+  "s_shift_right_px": 14,
+  "minimum_horizontal_gaps_px": {
+    "G_O": 12,
+    "O_S": 12
+  },
+  "gif_sha256": "f4202b58d76273c1bfc6e67b2fc43f8c3c4a7dbe574bd67a1b4d5213b59d891a",
+  "asset_sha256": "3c0d08b24428d49180da51460e9c9cd076d86693057898e2808ab1573abc5d6d",
+  "scope": "working-source asset only; no release image, Seed or physical boot validation"
+}

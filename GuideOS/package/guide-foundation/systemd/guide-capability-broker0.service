@@ -1,0 +1,40 @@
+[Unit]
+Description=Guide unprivileged capability broker foundation
+After=guide-supervisor0.service
+Requires=guide-capability-broker0.socket guide-capability-provider0.socket
+
+[Service]
+Type=exec
+TimeoutStartSec=2s
+User=guide-broker
+Group=guide-broker
+SupplementaryGroups=guide-apps
+Sockets=guide-capability-broker0.socket guide-capability-provider0.socket
+ExecStart=/usr/libexec/guideos/guide-capability-broker0
+Restart=on-failure
+RestartSec=2s
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+AmbientCapabilities=
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+LockPersonality=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+UMask=0077
+RuntimeDirectory=guideos/broker
+RuntimeDirectoryMode=0750
+TasksMax=16
+MemoryHigh=10M
+MemoryMax=20M

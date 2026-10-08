@@ -1,0 +1,12 @@
+Use case: stylized-concept
+Asset type: visual target for a 640x480 handheld boot animation
+Primary request: Redesign the referenced centered globe as a clean pixel-art test render using the newly established globe rules.
+Scene/backdrop: pure black outer-space background with no stars and no text.
+Subject: one centered Earthlike globe occupying exactly the central vertical two-thirds of a 4:3 landscape frame. The globe has a deliberately pixel-stepped circular silhouette, simple broad continents inspired by plausible real coastlines, continuous polar land at top and bottom with inward-facing coastlines and snow-capped poleward ends, bright blue oceans, green forests and grasslands, tan deserts, grey mountains, clustered warm city lights on the night side, and visible classified roads connecting substantial settlement clusters. Every substantial cluster must have at least one road entry or exit. Minor roads are sparse dim dotted routes, standard roads are continuous narrow routes, and major roads are brighter trunk corridors. Roads stay on land and bend around mountains, lakes, ocean, ice, and other impassable terrain.
+Style/medium: authored modern pixel art, not deliberately low-detail retro art; hard 2x2 pixel blocks at the globe outline; crisp nearest-neighbor rendering; moderate internal detail.
+Composition/framing: 640x480-equivalent 4:3 frame, 320-pixel-equivalent globe centered at x320 y240, equal empty black space above and below.
+Lighting/mood: unseen sun to screen-right; right third daylight, middle third divided into two twilight transitions, left third night; city and road lights visible only through night and twilight; cloud cover partially obscures lights.
+Color palette: luminous white clouds and ice, bright cyan and cerulean ocean, royal blue shadow, rich green terrain, restrained tan desert, warm gold-white city lights, faint cool-blue secondary lights.
+Constraints: globe only; no spacecraft; no character; no rings; no text; no logos; no stars; no smooth antialiased perimeter; no glowing rectangular texture edges; clouds and all imagery strictly clipped to the globe; avoid tendril-shaped continents and avoid roads crossing water.
+
+Implementation amendment after generation: terrain, roads and lights remain clipped to the globe. The cloud layer may extend up to four physical pixels beyond the left and right limbs through a separate pixel-stepped high-atmosphere mask.

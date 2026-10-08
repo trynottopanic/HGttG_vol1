@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bounded MediaWiki API client for the GuideOS native Wikipedia reader."""
+"""Bounded MediaWiki API client for GuideOS Wikipedia views."""
 
 import argparse
 from html.parser import HTMLParser
@@ -163,7 +163,13 @@ def search(query, opener=urllib.request.urlopen):
         raise WikipediaClientError("Wikipedia returned an unexpected search result") from error
 
 
-def article(title, opener=urllib.request.urlopen):
+def parsed_article(title, opener=urllib.request.urlopen):
+    """Return one validated MediaWiki article with its rendered HTML intact.
+
+    Callers must still treat ``html`` as hostile input.  The native text view
+    feeds it to ``_ReadableArticleParser``; the NetSurf view feeds it to the
+    strict allow-list sanitizer in ``guide_wikipedia_html``.
+    """
     title = title.strip()
     if not title or len(title) > 300:
         raise WikipediaClientError("Article title must contain 1 to 300 characters")
@@ -181,17 +187,12 @@ def article(title, opener=urllib.request.urlopen):
     )
     try:
         page = document["parse"]
-        parser = _ReadableArticleParser()
-        parser.feed(str(page["text"]))
-        parser.close()
-        text, links = parser.result()
         resolved_title = str(page["title"])
         return {
             "pageid": int(page["pageid"]),
             "title": resolved_title,
             "source": "https://en.wikipedia.org/wiki/" + urllib.parse.quote(resolved_title.replace(" ", "_")),
-            "text": text,
-            "links": links,
+            "html": str(page["text"]),
             "language": "en",
             "license": "CC BY-SA; see source page for attribution and version history",
         }
@@ -199,6 +200,29 @@ def article(title, opener=urllib.request.urlopen):
         raise
     except (KeyError, IndexError, TypeError, ValueError) as error:
         raise WikipediaClientError("Wikipedia returned an unexpected article") from error
+
+
+def article(title, opener=urllib.request.urlopen):
+    """Return the existing bounded plain-text representation of an article."""
+    page = parsed_article(title, opener)
+    parser = _ReadableArticleParser()
+    parser.feed(page["html"])
+    parser.close()
+    text, links = parser.result()
+    result = dict(page)
+    del result["html"]
+    result["text"] = text
+    result["links"] = links
+    return result
+
+
+def readable_text(page):
+    """Extract bounded, human-readable text from a validated parsed page."""
+    parser = _ReadableArticleParser()
+    parser.feed(str(page["html"]))
+    parser.close()
+    text, links = parser.result()
+    return text[:32_000], links
 
 
 def main(argv=None):

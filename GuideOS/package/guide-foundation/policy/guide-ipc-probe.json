@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "application_id": "9001",
+  "revision": 1,
+  "component": "main",
+  "executable": "/usr/libexec/guideos/guide-ipc-probe",
+  "lifecycle": ["start", "stop"],
+  "capabilities": ["system.diagnostics.read"],
+  "resources": {"tasks_max": 4, "memory_high_bytes": 4194304, "memory_max_bytes": 8388608}
+}

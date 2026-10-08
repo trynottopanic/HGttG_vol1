@@ -1,0 +1,77 @@
+#!/bin/sh
+# Staged NetSurf renderer for Guide Wikipedia. The native text reader remains
+# the default until controller, framebuffer, and shutdown handoff tests pass.
+set -u
+
+app=/usr/lib/guideos/apps/wikipedia-0.3
+browser=/usr/lib/guideos/netsurf/netsurf-fb
+runtime=/usr/lib/guideos/netsurf/runtime
+log=/data/guideos/wikipedia-netsurf.log
+gateway_pid=
+browser_pid=
+
+cleanup() {
+    if [ -n "${browser_pid}" ]; then
+        kill "${browser_pid}" 2>/dev/null || true
+        wait "${browser_pid}" 2>/dev/null || true
+    fi
+    if [ -n "${gateway_pid}" ]; then
+        kill "${gateway_pid}" 2>/dev/null || true
+        wait "${gateway_pid}" 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT INT TERM HUP
+
+mkdir -p /data/guideos /data/guideos/netsurf
+export HOME=/data/guideos/netsurf
+export PYTHONPATH="${app}:${app}/runtime/python3.12/lib-dynload"
+export LD_LIBRARY_PATH="${app}/runtime/lib"
+export SSL_CERT_FILE="${app}/runtime/certs/ca-certificates.crt"
+export SDL_NOMOUSE=1
+
+# The prototype seed configures Wi-Fi directly and may leave the conventional
+# local-only interface down. The gateway must never fall back to a LAN address.
+if ! ip link set dev lo up; then
+    echo "Guide Wikipedia could not enable its private local connection." >&2
+    exit 1
+fi
+if ! ip -4 address show dev lo | grep -q '127\.0\.0\.1/8'; then
+    if ! ip address add 127.0.0.1/8 dev lo; then
+        echo "Guide Wikipedia could not configure its private local connection." >&2
+        exit 1
+    fi
+fi
+
+/usr/bin/python3 "${app}/guide_wikipedia_netsurf.py" --port 8765 >"${log}" 2>&1 &
+gateway_pid=$!
+
+attempt=0
+while [ "${attempt}" -lt 30 ]; do
+    if wget -q -O /dev/null http://127.0.0.1:8765/health; then
+        break
+    fi
+    if ! kill -0 "${gateway_pid}" 2>/dev/null; then
+        echo "Guide Wikipedia gateway stopped before becoming ready." >&2
+        exit 1
+    fi
+    attempt=$((attempt + 1))
+    sleep 0.1
+done
+if [ "${attempt}" -ge 30 ]; then
+    echo "Guide Wikipedia gateway did not become ready." >&2
+    exit 1
+fi
+
+"${runtime}/libc.so" --library-path "${runtime}" \
+    "${browser}" \
+    --fb_face_sans_serif /usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf \
+    --fb_face_sans_serif_bold /usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf \
+    --fb_face_sans_serif_italic /usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf \
+    --fb_face_sans_serif_italic_bold /usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf \
+    --fb_osk true \
+    -f sdl -b 32 -w 640 -h 480 http://127.0.0.1:8765/ &
+browser_pid=$!
+wait "${browser_pid}"
+status=$?
+browser_pid=
+exit "${status}"

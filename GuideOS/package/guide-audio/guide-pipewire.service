@@ -1,0 +1,20 @@
+[Unit]
+Description=Guide audio routing
+Requires=guide-audio-bus.service
+After=guide-audio-bus.service
+
+[Service]
+User=guide-audio
+Group=audio
+SupplementaryGroups=bluetooth
+Environment=XDG_RUNTIME_DIR=/run/guide-audio
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/guide-audio/bus
+ExecStart=/usr/bin/pipewire
+Restart=on-failure
+RestartSec=2
+MemoryHigh=64M
+MemoryMax=128M
+LimitRTPRIO=20
+LimitRTTIME=200ms
+LimitMEMLOCK=16M
+TimeoutStopSec=3

@@ -1,0 +1,31 @@
+From 8b0172f39ee64b8f8c8dd37da4d9f7601413e64a Mon Sep 17 00:00:00 2001
+From: GuideOS Project <guideos@localhost>
+Date: Fri, 11 Sep 2026 00:42:00 -0400
+Subject: [PATCH] framebuffer: open native keyboard for text fields
+
+The framebuffer frontend already creates an on-screen keyboard, but normally
+requires a separate toolbar click to reveal it.  Deck users have no physical
+keyboard, so reveal the existing keyboard after a completed pointer click when
+NetSurf reports that the focused element accepts pasted text.
+
+---
+ netsurf/frontends/framebuffer/gui.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/netsurf/frontends/framebuffer/gui.c b/netsurf/frontends/framebuffer/gui.c
+index 89e9581..8883327 100644
+--- a/netsurf/frontends/framebuffer/gui.c
++++ b/netsurf/frontends/framebuffer/gui.c
+@@ -791,6 +791,10 @@ fb_browser_window_click(fbtk_widget_t *widget, fbtk_callback_info *cbi)
+ 
+ 		if (mouse) {
+ 			browser_window_mouse_click(gw->bw, mouse, x, y);
++			if ((browser_window_get_editor_flags(gw->bw) &
++			     BW_EDITOR_CAN_PASTE) != 0) {
++				map_osk();
++			}
+ 		}
+ 
+ 		last_click.time = time_now;
+-- 
+2.43.0

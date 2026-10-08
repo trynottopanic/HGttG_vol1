@@ -33,6 +33,17 @@ try {
     try { $manifest = ($reader.ReadToEnd() | ConvertFrom-Json) }
     finally { $reader.Dispose() }
 
+    if ($manifest.installAction -eq 'application.install.v0') {
+        $python = (Get-Command python -ErrorAction Stop).Source
+        $verifier = Join-Path $PSScriptRoot '../../package/guide-installer/guide_cartridge.py'
+        $raw = & $python -X utf8 $verifier $packagePath
+        if ($LASTEXITCODE -ne 0) { throw 'Application cartridge validation failed.' }
+        $verified = ($raw | ConvertFrom-Json)
+        if ($PassThru) {
+            [pscustomobject]@{ Path=$packagePath; Id=$verified.manifest.id; Name=$verified.manifest.name; Version=$verified.manifest.version; Kind='application'; Summary=$verified.manifest.summary; Capabilities=@($verified.manifest.capabilities); InstallAction='application.install.v0'; FileCount=@($verified.manifest.files).Count; ExpandedBytes=$verified.expandedBytes; Sha256=$verified.sha256 }
+        } elseif (-not $Quiet) { Write-Host 'Unsigned application cartridge verified.' }
+        return
+    }
     if ($manifest.format -ne 'GUIDE-CARTRIDGE-1') { throw 'Unsupported cartridge format.' }
     Assert-GuideIdentifier -Id ([string]$manifest.id)
     Assert-GuideVersion -Version ([string]$manifest.version)
@@ -59,7 +70,9 @@ try {
     }
     if ($null -ne $installAction -and
         @('feature.wifi.rg35xxh', 'feature.developer-link.rg35xxh',
-          'application.wikipedia.rg35xxh') -notcontains [string]$installAction) {
+          'application.wikipedia.rg35xxh',
+          'application.semiotic-engine.rg35xxh',
+          'application.emulation.rg35xxh') -notcontains [string]$installAction) {
         throw "Unsupported installation action: $installAction"
     }
 

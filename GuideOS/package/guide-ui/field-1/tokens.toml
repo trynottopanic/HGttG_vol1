@@ -1,0 +1,90 @@
+[schema]
+name = "Guide UI Runtime Tokens"
+version = 0
+theme = "field-1"
+typography = "typography-0"
+
+[display]
+profile = "deck-640x480"
+width = 640
+height = 480
+
+[colors]
+paper = "#EFEDE1"
+ink = "#3A3B30"
+blue = "#446470"
+blue_light = "#91A7AE"
+rust = "#9D4E22"
+green = "#416F4B"
+danger = "#973930"
+panel = "#4E6575"
+white = "#F6F3E7"
+
+ground = "#142936"
+context = "#D5DDE3"
+field = "#CEE2EF"
+selected = "#537C96"
+focus = "#EBA52E"
+primary = "#F2F7FA"
+secondary = "#C4E6ED"
+dark = "#213A49"
+
+[fonts.serif.bold]
+production = ["NotoSerif-Bold.ttf"]
+reduced = ["DejaVuSerif-Bold.ttf"]
+preview = ["georgiab.ttf"]
+
+[fonts.sans.regular]
+production = ["NotoSans-Regular.ttf"]
+reduced = ["DejaVuSans.ttf"]
+preview = ["segoeui.ttf"]
+
+[fonts.sans.bold]
+production = ["NotoSans-Bold.ttf"]
+reduced = ["DejaVuSans-Bold.ttf"]
+preview = ["segoeuib.ttf"]
+
+[fonts.mono.regular]
+production = ["NotoSansMono-Regular.ttf"]
+reduced = ["DejaVuSansMono.ttf"]
+preview = ["consola.ttf"]
+
+[typography.masthead]
+family = "sans"
+weight = "bold"
+size = 28
+
+[typography.screen_title]
+family = "sans"
+weight = "bold"
+size = 28
+
+[typography.body]
+family = "sans"
+weight = "regular"
+size = 24
+
+[typography.body_strong]
+family = "sans"
+weight = "bold"
+size = 24
+
+[typography.control]
+family = "sans"
+weight = "regular"
+size = 20
+
+[typography.control_strong]
+family = "sans"
+weight = "bold"
+size = 20
+
+[typography.metadata]
+family = "sans"
+weight = "regular"
+size = 20
+
+[typography.numeric]
+family = "mono"
+weight = "regular"
+size = 20

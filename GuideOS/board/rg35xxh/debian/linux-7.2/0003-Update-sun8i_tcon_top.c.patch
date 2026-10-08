@@ -1,0 +1,13 @@
+From: GuideOS Project <guideos@localhost>
+Subject: [PATCH] Retain H700 panel routing workaround on Linux 7.2
+
+Context refresh of Philippe Simons' ROCKNIX e455e133 panel workaround.
+Linux 7.2 removed the adjacent comment. Behavior is unchanged from that
+reference patch; physical panel acceptance is still required.
+
+--- a/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
++++ b/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
+@@ -229,2 +229,2 @@
+-	writel(0, regs + TCON_TOP_PORT_SEL_REG);
++	writel(0x20, regs + TCON_TOP_PORT_SEL_REG);
+ 	writel(0, regs + TCON_TOP_GATE_SRC_REG);

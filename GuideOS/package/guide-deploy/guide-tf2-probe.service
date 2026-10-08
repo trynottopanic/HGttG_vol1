@@ -1,0 +1,19 @@
+[Unit]
+Description=Bounded TF2-only runtime-power comparison
+After=guide-storage.service
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/lib/guideos/deploy/tf2_probe.py
+RuntimeDirectory=guideos-tf2-probe
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+TimeoutStartSec=130
+TimeoutStopSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/run/guideos-tf2-probe /sys/bus/platform/devices/4022000.mmc/power/control
+MemoryMax=32M
+TasksMax=8
+Environment=PYTHONDONTWRITEBYTECODE=1

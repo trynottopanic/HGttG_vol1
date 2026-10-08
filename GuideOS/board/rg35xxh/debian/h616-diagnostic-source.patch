@@ -1,0 +1,49 @@
+--- a/sound/soc/sunxi/sun4i-codec.c
++++ b/sound/soc/sunxi/sun4i-codec.c
+@@ -1885,7 +1885,17 @@
+ 	return card;
+ };
+ 
++/* Fixed diagnostic sources documented in the H616 DAC debug register. */
++static const char * const sun50i_h616_pattern_text[] = {
++	"Normal", "Sine", "Quiet Sine", "Silence",
++};
++
++static SOC_ENUM_SINGLE_DECL(sun50i_h616_pattern_enum,
++			    SUN50I_DAC_DG_REG, 9,
++			    sun50i_h616_pattern_text);
++
+ static const struct snd_kcontrol_new sun50i_h616_codec_codec_controls[] = {
++	SOC_ENUM("DAC Diagnostic Source", sun50i_h616_pattern_enum),
+ 	SOC_SINGLE_TLV("DAC Playback Volume", SUN4I_CODEC_DAC_DPC,
+ 		       SUN4I_CODEC_DAC_DPC_DVOL, 0x3f, 1,
+ 		       sun6i_codec_dvol_scale),
+@@ -1946,6 +1956,19 @@
+ 	return ret < 0 ? ret : 0;
+ }
+ 
++static int sun50i_h616_codec_component_probe(struct snd_soc_component *component)
++{
++	int ret;
++
++	/* Never inherit a diagnostic source when the driver is loaded. */
++	ret = snd_soc_component_update_bits(component, SUN50I_DAC_DG_REG,
++					    GENMASK(10, 9), 0);
++	if (ret < 0)
++		return ret;
++
++	return sun50i_h616_codec_analog_init(component);
++}
++
+ static int sun50i_h616_codec_ramp_event(struct snd_soc_dapm_widget *w,
+ 				      struct snd_kcontrol *kcontrol, int event)
+ {
+@@ -1994,7 +2017,7 @@
+ };
+ 
+ static const struct snd_soc_component_driver sun50i_h616_codec_codec = {
+-	.probe = sun50i_h616_codec_analog_init,
++	.probe = sun50i_h616_codec_component_probe,
+ 	.controls   = sun50i_h616_codec_codec_controls,
+ 	.num_controls   = ARRAY_SIZE(sun50i_h616_codec_codec_controls),
+ 	.dapm_widgets   = sun50i_h616_codec_codec_widgets,

@@ -1,0 +1,5 @@
+config BR2_PACKAGE_GUIDE_SE_DECK
+	bool "guide-se-deck"
+	depends on BR2_PACKAGE_PYTHON3
+	help
+	  Install the bounded Deck-side interface for a Node-hosted Semiotic Engine.

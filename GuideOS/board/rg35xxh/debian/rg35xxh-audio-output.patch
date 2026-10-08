@@ -1,0 +1,223 @@
+--- a/sound/soc/sunxi/sun4i-codec.c
++++ b/sound/soc/sunxi/sun4i-codec.c
+@@ -10,6 +10,7 @@
+  * Based on the Allwinner SDK driver, released under the GPL.
+  */
+ 
++#include <linux/mutex.h>
+ #include <linux/init.h>
+ #include <linux/kernel.h>
+ #include <linux/module.h>
+@@ -326,6 +327,9 @@
+ #define SUNIV_CODEC_ADC_DBG		(0x4c)
+ 
+ struct sun4i_codec {
++	struct mutex lineout_lock;
++	unsigned int lineout_requested;
++	bool lineout_ready;
+ 	spinlock_t probe_lock;
+ 	bool probe_armed;
+ 	u32 probe_values[11];
+@@ -1999,6 +2003,56 @@
+ 	return 0;
+ }
+ 
++/* RG35XX H line-out requests are applied only after the analog ramp. */
++static int rg35xxh_lineout_get(struct snd_kcontrol *control,
++			     struct snd_ctl_elem_value *value)
++{
++	struct snd_soc_component *component = snd_kcontrol_chip(control);
++	struct sun4i_codec *scodec = snd_soc_card_get_drvdata(component->card);
++
++	if (!of_machine_is_compatible("anbernic,rg35xx-h"))
++		return snd_soc_get_volsw(control, value);
++	mutex_lock(&scodec->lineout_lock);
++	value->value.integer.value[0] = !!(scodec->lineout_requested &
++					 BIT(SUN50I_H616_LINEOUTL_EN));
++	value->value.integer.value[1] = !!(scodec->lineout_requested &
++					 BIT(SUN50I_H616_LINEOUTR_EN));
++	mutex_unlock(&scodec->lineout_lock);
++	return 0;
++}
++
++static int rg35xxh_lineout_put(struct snd_kcontrol *control,
++			     struct snd_ctl_elem_value *value)
++{
++	struct snd_soc_component *component = snd_kcontrol_chip(control);
++	struct sun4i_codec *scodec = snd_soc_card_get_drvdata(component->card);
++	unsigned int mask = BIT(SUN50I_H616_LINEOUTL_EN) |
++			    BIT(SUN50I_H616_LINEOUTR_EN);
++	unsigned int requested;
++	int ret, changed;
++
++	if (!of_machine_is_compatible("anbernic,rg35xx-h"))
++		return snd_soc_put_volsw(control, value);
++	if (value->value.integer.value[0] < 0 ||
++	    value->value.integer.value[0] > 1 ||
++	    value->value.integer.value[1] < 0 ||
++	    value->value.integer.value[1] > 1)
++		return -EINVAL;
++	requested = (value->value.integer.value[0] ?
++		     BIT(SUN50I_H616_LINEOUTL_EN) : 0) |
++		    (value->value.integer.value[1] ?
++		     BIT(SUN50I_H616_LINEOUTR_EN) : 0);
++	mutex_lock(&scodec->lineout_lock);
++	changed = requested != scodec->lineout_requested;
++	ret = snd_soc_component_update_bits(component,
++			SUN50I_H616_DAC_AC_DAC_REG, mask,
++			scodec->lineout_ready ? requested : 0);
++	if (ret >= 0)
++		scodec->lineout_requested = requested;
++	mutex_unlock(&scodec->lineout_lock);
++	return ret < 0 ? ret : changed;
++}
++
+ static const struct snd_kcontrol_new sun50i_h616_codec_codec_controls[] = {
+ 	SOC_SINGLE_BOOL_EXT("DAC Buffer Probe", 0,
+ 			    sun50i_h616_probe_get, sun50i_h616_probe_put),
+@@ -2017,10 +2071,11 @@
+ 		       SUN50I_H616_DAC_AC_DAC_REG,
+ 		       SUN50I_H616_LINEOUT_VOL, 0x1f, 0,
+ 		       sun6i_codec_lineout_vol_scale),
+-	SOC_DOUBLE("Line Out Playback Switch",
+-		   SUN50I_H616_DAC_AC_DAC_REG,
+-		   SUN50I_H616_LINEOUTL_EN,
+-		   SUN50I_H616_LINEOUTR_EN, 1, 0),
++	SOC_DOUBLE_EXT("Line Out Playback Switch",
++		       SUN50I_H616_DAC_AC_DAC_REG,
++		       SUN50I_H616_LINEOUTL_EN,
++		       SUN50I_H616_LINEOUTR_EN, 1, 0,
++		       rg35xxh_lineout_get, rg35xxh_lineout_put),
+ };
+ 
+ static const struct snd_kcontrol_new sun50i_h616_codec_mixer_controls[] = {
+@@ -2066,7 +2121,9 @@
+ 	/* Vendor ramp setup: 6 us step; leave digital enable to DAPM. */
+ 	ret = snd_soc_component_update_bits(component,
+ 			SUN50I_H616_DAC_AC_RAMP_REG,
+-			GENMASK(6, 4), BIT(SUN50I_H616_RAMP_STEP));
++			GENMASK(6, 4),
++			(of_machine_is_compatible("anbernic,rg35xx-h") ? 5 : 1)
++			<< SUN50I_H616_RAMP_STEP);
+ 	return ret < 0 ? ret : 0;
+ }
+ 
+@@ -2080,20 +2137,94 @@
+ 	if (ret < 0)
+ 		return ret;
+ 
++	if (of_machine_is_compatible("anbernic,rg35xx-h")) {
++		ret = snd_soc_component_update_bits(component,
++				SUN50I_H616_DAC_AC_DAC_REG,
++				BIT(SUN50I_H616_LINEOUTL_EN) |
++				BIT(SUN50I_H616_LINEOUTR_EN), 0);
++		if (ret < 0)
++			return ret;
++	}
++
+ 	return sun50i_h616_codec_analog_init(component);
++}
++
++/* Exact vendor table, index 5: 138 ms (44.1k family), 126 ms (48k).
++ * Mainline's module-clock accounting reports half the vendor rate.
++ * This changes no clock, FIFO or DMA programming.
++ */
++static int rg35xxh_ramp_delay(unsigned long rate)
++{
++	switch (rate) {
++	case 22579200:
++		return 138;
++	case 24576000:
++		return 126;
++	default:
++		return -EINVAL;
++	}
+ }
+ 
+ static int sun50i_h616_codec_ramp_event(struct snd_soc_dapm_widget *w,
+ 				      struct snd_kcontrol *kcontrol, int event)
+ {
+ 	struct snd_soc_component *component = snd_soc_dapm_to_component(w->dapm);
+-
+-	if (event == SND_SOC_DAPM_PRE_PMU)
+-		return sun50i_h616_codec_analog_init(component);
+-
+-	/* Settle after either digital ramp edge, before the next DAPM stage. */
+-	msleep(25);
+-	return 0;
++	struct sun4i_codec *scodec = snd_soc_card_get_drvdata(component->card);
++	unsigned int mask = BIT(SUN50I_H616_LINEOUTL_EN) |
++			    BIT(SUN50I_H616_LINEOUTR_EN);
++	int delay, ret = 0;
++
++	if (!of_machine_is_compatible("anbernic,rg35xx-h")) {
++		if (event == SND_SOC_DAPM_PRE_PMU)
++			return sun50i_h616_codec_analog_init(component);
++		if (event != SND_SOC_DAPM_PRE_PMD)
++			msleep(25);
++		return 0;
++	}
++
++	mutex_lock(&scodec->lineout_lock);
++	switch (event) {
++	case SND_SOC_DAPM_PRE_PMU:
++		scodec->lineout_ready = false;
++		ret = snd_soc_component_update_bits(component,
++				SUN50I_H616_DAC_AC_DAC_REG, mask, 0);
++		if (ret < 0)
++			break;
++		ret = rg35xxh_ramp_delay(clk_get_rate(scodec->clk_module));
++		if (ret < 0)
++			break;
++		ret = sun50i_h616_codec_analog_init(component);
++		break;
++	case SND_SOC_DAPM_POST_PMU:
++		delay = rg35xxh_ramp_delay(clk_get_rate(scodec->clk_module));
++		if (delay < 0) {
++			ret = delay;
++			break;
++		}
++		msleep(delay);
++		ret = snd_soc_component_update_bits(component,
++				SUN50I_H616_DAC_AC_DAC_REG, mask,
++				scodec->lineout_requested);
++		scodec->lineout_ready = ret >= 0;
++		break;
++	case SND_SOC_DAPM_PRE_PMD:
++		/* Vendor order: ramp down, settle, then disable line-out. */
++		scodec->lineout_ready = false;
++		ret = snd_soc_component_update_bits(component,
++				SUN50I_H616_DAC_AC_RAMP_REG,
++				BIT(SUN50I_H616_RDEN), 0);
++		delay = rg35xxh_ramp_delay(clk_get_rate(scodec->clk_module));
++		msleep(delay < 0 ? 138 : delay);
++		if (ret >= 0)
++			ret = snd_soc_component_update_bits(component,
++					SUN50I_H616_DAC_AC_DAC_REG, mask, 0);
++		else
++			snd_soc_component_update_bits(component,
++					SUN50I_H616_DAC_AC_DAC_REG, mask, 0);
++		break;
++	}
++	mutex_unlock(&scodec->lineout_lock);
++	return ret < 0 ? ret : 0;
+ }
+ 
+ static const struct snd_soc_dapm_widget sun50i_h616_codec_codec_widgets[] = {
+@@ -2126,7 +2257,7 @@
+ 			     SUN50I_H616_RDEN, 0, NULL, 0,
+ 			     sun50i_h616_codec_ramp_event,
+ 			     SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+-			     SND_SOC_DAPM_POST_PMD),
++			     SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+ 	SND_SOC_DAPM_OUTPUT("LINEOUT"),
+ };
+ 
+@@ -2511,6 +2642,7 @@
+ 
+ 	scodec->dev = &pdev->dev;
+ 	spin_lock_init(&scodec->probe_lock);
++	mutex_init(&scodec->lineout_lock);
+ 
+ 	base = devm_platform_get_and_ioremap_resource(pdev, 0, &res);
+ 	if (IS_ERR(base))

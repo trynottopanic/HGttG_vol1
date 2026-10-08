@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from pathlib import Path
 import tempfile
 import threading
@@ -185,6 +187,41 @@ class MediaPreparationTests(unittest.TestCase):
                 self.assertIn("speed", arguments)
             finally:
                 preparer.close()
+
+    def test_conversion_preserves_bounded_audio_alternatives_and_labels(self):
+        with tempfile.TemporaryDirectory() as folder:
+            preparer=DeckMediaPreparer(Path(folder)/'cache')
+            try:
+                probe={'streams':[{'index':0,'codec_type':'video'},
+                    *[{'index':i,'codec_type':'audio','tags':{'language':'eng','title':f'Track {i}'}} for i in range(1,11)]]}
+                args=preparer._ffmpeg_arguments('ffmpeg',Path('input.mkv'),Path('output.mp4'),probe,True)
+                mappings=[args[i+1] for i,value in enumerate(args) if value=='-map']
+                self.assertEqual(mappings,['0:'+str(i) for i in range(9)])
+                self.assertIn('title=Track 2',args);self.assertIn('-metadata:s:a:1',args)
+                self.assertIn('-disposition:a:7',args)
+            finally:preparer.close()
+
+    @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'),'FFmpeg tools required')
+    def test_real_conversion_keeps_two_audio_tracks_and_text_subtitles(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);subtitle=root/'captions.srt';source=root/'source.mkv';output=root/'prepared.mp4'
+            subtitle.write_text('1\n00:00:00,000 --> 00:00:01,000\nCaption fixture\n')
+            subprocess.run(['ffmpeg','-v','error','-f','lavfi','-i','color=c=black:s=160x90:r=10:d=1',
+                '-f','lavfi','-i','sine=frequency=440:duration=1','-f','lavfi','-i','sine=frequency=880:duration=1',
+                '-i',str(subtitle),'-map','0:v','-map','1:a','-map','2:a','-map','3:s',
+                '-c:v','libx264','-c:a','aac','-c:s','srt','-metadata:s:a:0','language=eng',
+                '-metadata:s:a:1','language=fra','-metadata:s:a:1','title=French',str(source)],check=True,timeout=30)
+            preparer=DeckMediaPreparer(root/'cache')
+            try:
+                args=preparer._ffmpeg_arguments('ffmpeg',source,output,preparer._probe(source),True)
+                subprocess.run(args,check=True,timeout=30,capture_output=True)
+                result=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-of','json',str(output)],timeout=10))
+                audio=[s for s in result['streams'] if s['codec_type']=='audio']
+                subs=[s for s in result['streams'] if s['codec_type']=='subtitle']
+                self.assertEqual(len(audio),2);self.assertEqual(len(subs),1)
+                self.assertEqual([s['tags']['language'] for s in audio],['eng','fra'])
+                self.assertEqual(subs[0]['codec_name'],'mov_text')
+            finally:preparer.close()
 
     def test_converter_retries_without_subtitles_and_reports_real_errors(self) -> None:
         with tempfile.TemporaryDirectory() as folder:

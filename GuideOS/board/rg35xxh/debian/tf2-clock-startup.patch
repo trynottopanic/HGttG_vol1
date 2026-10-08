@@ -1,0 +1,144 @@
+--- a/drivers/mmc/host/sunxi-mmc.c
++++ b/drivers/mmc/host/sunxi-mmc.c
+@@ -300,6 +300,9 @@
+ 
+ 	/* timings */
+ 	bool		use_new_timings;
++
++	/* RG35XX H external slot: bootstrap a defined clock after reset. */
++	bool		tf2_bootstrap_clock;
+ };
+ 
+ static int sunxi_mmc_reset_host(struct sunxi_mmc_host *host)
+@@ -688,6 +691,15 @@
+ 
+ 	if (rval & SDXC_START) {
+ 		dev_err(mmc_dev(host->mmc), "fatal err update clk timeout\n");
++		/* Board bring-up evidence: no recovery or power-policy change. */
++		if (!strcmp(dev_name(host->dev), "4022000.mmc"))
++			dev_err(host->dev,
++				"GUIDE_TF2_CLOCK enable=%u cmd=%08x clk=%08x status=%08x module_hz=%lu ios_hz=%u power=%u runtime_active=%d\n",
++				oclk_en, rval, mmc_readl(host, REG_CLKCR),
++				mmc_readl(host, REG_STAS),
++				clk_get_rate(host->clk_mmc), host->mmc->ios.clock,
++				host->mmc->ios.power_mode,
++				pm_runtime_active(host->dev));
+ 		return -EIO;
+ 	}
+ 
+@@ -895,10 +907,12 @@
+ 	mmc_writel(host, REG_GCTRL, rval);
+ 
+ 	host->ferror = sunxi_mmc_clk_set_rate(host, ios);
++	if (host->ferror)
++		host->mmc->actual_clock = 0;
+ 	/* Android code had a usleep_range(50000, 55000); here */
+ }
+ 
+-static void sunxi_mmc_card_power(struct sunxi_mmc_host *host,
++static int sunxi_mmc_card_power(struct sunxi_mmc_host *host,
+ 				 struct mmc_ios *ios)
+ {
+ 	struct mmc_host *mmc = host->mmc;
+@@ -912,7 +926,7 @@
+ 							     mmc->supply.vmmc,
+ 							     ios->vdd);
+ 			if (host->ferror)
+-				return;
++				return host->ferror;
+ 		}
+ 
+ 		if (!IS_ERR(mmc->supply.vqmmc)) {
+@@ -920,7 +934,7 @@
+ 			if (host->ferror) {
+ 				dev_err(mmc_dev(mmc),
+ 					"failed to enable vqmmc\n");
+-				return;
++				return host->ferror;
+ 			}
+ 			host->vqmmc_enabled = true;
+ 		}
+@@ -942,13 +956,16 @@
+ 		dev_dbg(mmc_dev(mmc), "Ignoring unknown card power state\n");
+ 		break;
+ 	}
++	return 0;
+ }
+ 
+ static void sunxi_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
+ {
+ 	struct sunxi_mmc_host *host = mmc_priv(mmc);
+ 
+-	sunxi_mmc_card_power(host, ios);
++	host->ferror = sunxi_mmc_card_power(host, ios);
++	if (host->ferror)
++		return;
+ 	sunxi_mmc_set_bus_width(host, ios->bus_width);
+ 	sunxi_mmc_set_clk(host, ios);
+ }
+@@ -1241,6 +1258,23 @@
+ 		goto error_assert_reset;
+ 	}
+ 
++	/*
++	 * TF2 may inherit a stale module-clock setting from firmware or suspend.
++	 * Program the identification rate before enabling it, while reset has
++	 * stopped card output. Later set_ios restores the requested card rate.
++	 * Do not apply this board quirk to the Seed or Wi-Fi controllers.
++	 */
++	if (host->tf2_bootstrap_clock) {
++		ret = clk_set_rate(host->clk_mmc, 400000);
++		if (ret)
++			goto error_disable_clk_ahb;
++		if (!clk_get_rate(host->clk_mmc) ||
++		    clk_get_rate(host->clk_mmc) > 400000) {
++			ret = -EINVAL;
++			goto error_disable_clk_ahb;
++		}
++	}
++
+ 	ret = clk_prepare_enable(host->clk_mmc);
+ 	if (ret) {
+ 		dev_err(host->dev, "Enable mmc clk err %d\n", ret);
+@@ -1377,6 +1411,9 @@
+ 	host = mmc_priv(mmc);
+ 	host->dev = &pdev->dev;
+ 	host->mmc = mmc;
++	host->tf2_bootstrap_clock =
++		of_machine_is_compatible("anbernic,rg35xx-h") &&
++		!strcmp(dev_name(&pdev->dev), "4022000.mmc");
+ 	spin_lock_init(&host->lock);
+ 
+ 	ret = sunxi_mmc_resource_request(host, pdev);
+@@ -1502,14 +1539,28 @@
+ 
+ 	ret = sunxi_mmc_enable(host);
+ 	if (ret)
+-		return ret;
+-
+-	sunxi_mmc_init_host(host);
++		goto error;
++
++	mmc->actual_clock = 0;
++	ret = sunxi_mmc_init_host(host);
++	if (ret)
++		goto error_disable;
+ 	sunxi_mmc_set_bus_width(host, mmc->ios.bus_width);
+ 	sunxi_mmc_set_clk(host, &mmc->ios);
++	ret = host->ferror;
++	if (ret)
++		goto error_disable;
+ 	enable_irq(host->irq);
+ 
+ 	return 0;
++
++error_disable:
++	sunxi_mmc_disable(host);
++error:
++	mmc->actual_clock = 0;
++	host->ferror = ret;
++	dev_err(dev, "Failed to restore MMC controller (%d)\n", ret);
++	return ret;
+ }
+ 
+ static int sunxi_mmc_runtime_suspend(struct device *dev)

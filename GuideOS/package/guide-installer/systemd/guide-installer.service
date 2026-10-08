@@ -1,0 +1,28 @@
+[Unit]
+Description=Guide owner application installer
+Requires=guide-installer.socket
+After=guide-supervisor0.service guide-installer-recovery.service
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -I /usr/lib/guideos/installer/guide_install_service.py
+User=root
+Group=root
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/guideos/applications /var/lib/guideos/installer /opt/guideos/applications /var/lib/private/guideos/applications
+RestrictAddressFamilies=AF_UNIX
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+MemoryHigh=96M
+MemoryMax=128M
+TasksMax=8
+LimitNOFILE=64
+TimeoutStopSec=20
+KillMode=mixed
+Restart=no

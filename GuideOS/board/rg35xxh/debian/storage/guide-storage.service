@@ -1,0 +1,37 @@
+[Unit]
+Description=GuideOS external card recognition owner
+After=local-fs.target systemd-udevd.service
+Requires=guide-media-library.socket
+After=guide-media-library.socket
+
+[Service]
+Type=simple
+Sockets=guide-media-library.socket
+Environment=GUIDE_MEDIA_LIBRARY=1
+Environment=GUIDE_MEDIA_PLAYER=1
+Environment=GUIDE_FILES=1
+SupplementaryGroups=guide-providers audio
+ExecStartPre=+/usr/sbin/modprobe exfat
+ExecStartPre=+/usr/sbin/modprobe nls_utf8
+ExecStart=/usr/bin/python3 /usr/lib/guideos/storage/storage_service.py --controller 4022000.mmc
+RuntimeDirectory=guideos-storage
+RuntimeDirectoryMode=0755
+StateDirectory=guideos-media
+StateDirectoryMode=0700
+PrivateMounts=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+ReadWritePaths=/run/guideos-storage /run/guideos/brokers /var/lib/guideos-media /data/guideos/files
+CapabilityBoundingSet=CAP_SYS_ADMIN
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_UNIX
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=5
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

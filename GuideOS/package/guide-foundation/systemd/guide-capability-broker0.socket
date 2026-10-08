@@ -1,0 +1,14 @@
+[Unit]
+Description=Guide capability broker health socket
+
+[Socket]
+ListenSequentialPacket=/run/guideos/brokers/control.sock
+ListenSequentialPacket=/run/guideos/brokers/health.sock
+SocketMode=0660
+SocketUser=guide-broker
+SocketGroup=guide-apps
+DirectoryMode=0750
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target

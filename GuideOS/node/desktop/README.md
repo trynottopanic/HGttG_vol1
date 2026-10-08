@@ -5,6 +5,17 @@ opens one understandable control panel. A Deck on the same private Wi-Fi can
 discover it, enter the code shown by the owner, and learn which carefully
 limited services the Node offers.
 
+The source control panels now include **AT Field**: Closed, Familiar or Open.
+The preview explains the change; existing sessions stay connected. Familiar and
+Closed hide the Node from broadcast discovery. Familiar permits trusted
+reconnections and code-approved pairing; Closed declines new incoming connections
+except named trusted-peer exceptions. Open preserves the previous discovery and
+pairing behavior. The selection is remembered without changing media or application
+permissions. See [AT Field](../../AT_FIELD_0.md) for behavior and implementation status.
+The separate [AT Field build](../../build/node-at-field/dist/GuideNode-ATField.exe)
+contains this change. It does not replace an existing installation. The native
+launcher accepts `--config PATH` for a separate Node settings profile.
+
 The owner can designate any number of Media folders. Recognized music and video
 beneath them become a read-only catalogue for paired Decks, with seeking-capable
 byte-range streaming. Each selected folder becomes a top-level shelf on the
@@ -38,6 +49,22 @@ must be added later as named capabilities with their own permission checks.
 It can safely detect whether Android's command-line tools and virtual devices
 already exist, but detection never starts an emulator or enables remote access.
 
+## Optional Semiotic Engine connector
+
+The Semiotic Engine is a separate program. The Node does not contain its model
+runtime and does not offer it merely because it is installed. The native Node
+window provides a clear owner-controlled permission switch and remembers that
+choice; the independent Engine must also be started separately. The Node reads
+the local loopback connection record,
+advertises `semiotic.text` only while the service answers compatibly, and keeps
+the Engine credential hidden from Decks.
+
+Paired Decks submit bounded text through `/guide/v1/semiotic/jobs`, inspect
+their own jobs, and may request cancellation. Job identifiers are scoped to the
+submitting Deck session; another Deck receives `not found`. The command-line
+`--semiotic-engine` flag remains available as an explicit startup override for
+testing, but ordinary use does not require it.
+
 The owner may also register specific Windows applications for temporary
 streaming sessions. A Deck sees only friendly names and every request must be
 approved in the Node window before that exact executable launches. With FFmpeg
@@ -46,6 +73,16 @@ available, the Node can expose only the named application window as a
 adapter has been independently tested; an application session never becomes a
 general desktop-control or command interface. See
 `../../APPLICATION_STREAMING_0.md` for the full boundary.
+
+## Paired Deck diagnostics
+
+When the Deck is paired over Wi-Fi, **Run diagnostics** collects its retained
+runtime event log and a full current-boot snapshot. The archive includes the
+browser and compositor journal, browser launch arguments and display-device
+handles, kernel/DRM state, Wi-Fi and network state, process and service status,
+and audio/storage diagnostics. The Deck continuously retains bounded logs while
+it runs, so capture can happen after a failed attempt. Archives are saved under
+`E:\DGttG\private-recovery\live-link` on the development computer.
 
 ## Current safety boundary
 

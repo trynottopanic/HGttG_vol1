@@ -1,0 +1,25 @@
+[Unit]
+Description=Guide background downloads and copies
+Requires=guide-storage.service
+After=guide-storage.service
+[Service]
+ExecStart=/usr/bin/python3 /usr/lib/guideos/transfers/transfer_service.py
+RuntimeDirectory=guideos-transfers
+RuntimeDirectoryMode=0755
+StateDirectory=guideos-transfers
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/guideos-transfers
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+Nice=10
+IOSchedulingClass=idle
+MemoryMax=96M
+TasksMax=16
+TimeoutStopSec=15
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target

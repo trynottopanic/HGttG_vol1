@@ -1,0 +1,10 @@
+# Compatibility toolchain for the current vendor-derived RG35XX H seed image.
+# The seed uses musl even though the independent future GuideOS image may use
+# a different libc.  Emulator payloads installed into that seed must request
+# /lib/ld-musl-aarch64.so.1 and link only against its musl ABI.
+BR2_aarch64=y
+BR2_ARM_FPU_VFPV4=y
+BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_6_12=y
+BR2_TOOLCHAIN_BUILDROOT_MUSL=y
+BR2_TOOLCHAIN_BUILDROOT_CXX=y
+BR2_PACKAGE_ALSA_LIB=y

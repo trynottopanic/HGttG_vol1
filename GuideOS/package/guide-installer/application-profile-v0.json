@@ -1,0 +1,31 @@
+{
+  "profile": "guide.application.v0",
+  "format": "GUIDE-CARTRIDGE-1",
+  "action": "application.install.v0",
+  "runtime": "guide.python-application",
+  "interfaceMajor": 1,
+  "limits": {
+    "archiveBytes": 1048576,
+    "expandedBytes": 2097152,
+    "metadataBytes": 32768,
+    "files": 64,
+    "pathUtf8Bytes": 128,
+    "pathDepth": 8,
+    "iconBytes": 32768,
+    "iconWidth": 64,
+    "iconHeight": 64,
+    "stagingBytes": 4194304,
+    "privateBytes": 524288,
+    "journalBytes": 65536,
+    "installationBytes": 32768
+  },
+  "capabilityCodes": {
+    "storage.private": 2,
+    "output.visual.surface": 3,
+    "input.actions": 4,
+    "input.text": 5,
+    "media.library.browse": 6,
+    "media.source.open": 7,
+    "media.session.control": 8
+  }
+}

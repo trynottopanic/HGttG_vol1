@@ -21,6 +21,7 @@
 #define WIFI_CONFIG WIFI_DIR "/saved.conf"
 #define WIFI_PENDING WIFI_DIR "/pending.conf"
 #define WIFI_PID WIFI_DIR "/wpa_supplicant.pid"
+#define WIFI_CONTROL_SOCKET WIFI_DIR "/wlan0"
 
 static void set_message(char *message, size_t size, const char *format, ...)
 {
@@ -315,6 +316,23 @@ static void stop_owned_supplicant(FILE *log)
     unlink(WIFI_PID);
 }
 
+static void clear_stale_wifi_state(FILE *log)
+{
+    struct stat state;
+    /* wpa_supplicant's control socket lives on the persistent root volume in
+     * early GuideOS images.  A hard reset can leave that socket behind even
+     * though its process no longer exists, preventing the next boot from
+     * starting Wi-Fi.  Remove only the fixed, private socket path. */
+    if (lstat(WIFI_CONTROL_SOCKET, &state) == 0) {
+        if (unlink(WIFI_CONTROL_SOCKET) == 0)
+            fprintf(log, "wifi removed stale control socket\n");
+        else
+            fprintf(log, "wifi could not remove stale control socket error=%s\n",
+                    strerror(errno));
+        fflush(log);
+    }
+}
+
 int guide_wifi_connect(const struct guide_wifi_network *network,
                        const char *password, FILE *log,
                        char *message, size_t message_size)
@@ -332,6 +350,7 @@ int guide_wifi_connect(const struct guide_wifi_network *network,
         return -1;
     }
     stop_owned_supplicant(log);
+    clear_stale_wifi_state(log);
     (void)busybox(up, output, sizeof(output), log);
     if (run_capture(wpa, NULL, output, sizeof(output), log) != 0) goto failed;
     for (attempt = 0; attempt < 20; ++attempt) {
@@ -369,7 +388,7 @@ void guide_wifi_autoconnect(void)
                        WIFI_CONFIG, "-P", WIFI_PID, NULL};
         char *link[] = {"/usr/sbin/iw", "dev", "wlan0", "link", NULL};
         char *dhcp[] = {"/bin/busybox", "udhcpc", "-i", "wlan0", "-q", "-n", "-t", "5", NULL};
-        int wait_count, associated = 0;
+        int wait_count, attempt, associated = 0;
         struct timespec pause = {1, 0};
         if (!log) log = stderr;
         for (wait_count = 0; wait_count < 30 && !guide_wifi_available(); ++wait_count)
@@ -379,12 +398,28 @@ void guide_wifi_autoconnect(void)
             if (log != stderr) fclose(log);
             _exit(1);
         }
-        stop_owned_supplicant(log);
-        (void)busybox(up, output, sizeof(output), log);
-        if (run_capture(wpa, NULL, output, sizeof(output), log) == 0) {
-            for (wait_count = 0; wait_count < 20; ++wait_count) {
-                if (run_capture(link, NULL, output, sizeof(output), log) == 0 &&
-                    strstr(output, "Connected to")) { associated = 1; break; }
+        /* A cold boot can expose wlan0 before firmware and the radio are
+         * actually ready.  Retry the complete bring-up, not merely the link
+         * query, so hard-reset recovery reaches the same state as a warm
+         * controlled boot. */
+        for (attempt = 0; attempt < 3 && !associated; ++attempt) {
+            stop_owned_supplicant(log);
+            clear_stale_wifi_state(log);
+            if (busybox(up, output, sizeof(output), log) == 0 &&
+                run_capture(wpa, NULL, output, sizeof(output), log) == 0) {
+                for (wait_count = 0; wait_count < 20; ++wait_count) {
+                    if (run_capture(link, NULL, output, sizeof(output), log) == 0 &&
+                        strstr(output, "Connected to")) {
+                        associated = 1;
+                        break;
+                    }
+                    nanosleep(&pause, NULL);
+                }
+            }
+            if (!associated) {
+                fprintf(log, "saved network retry attempt=%d\n", attempt + 1);
+                fflush(log);
+                stop_owned_supplicant(log);
                 nanosleep(&pause, NULL);
             }
         }

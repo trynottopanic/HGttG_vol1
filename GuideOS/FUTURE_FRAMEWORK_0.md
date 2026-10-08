@@ -85,14 +85,18 @@ security boundary.
 ## Common Guide application contract
 
 The next runtime should extend Cartridge Format 1 rather than replace it. A
-future application manifest will need five plain-language sections:
+future application manifest will need seven plain-language sections:
 
 - **What it is** — name, author, version, kind, source, and license;
 - **What it can show** — Guide View, media, remote application, or a combination;
 - **What it needs** — narrow capabilities, each with a human explanation;
 - **Where it can work** — on this Deck, through a Node, or either;
 - **What happens offline** — fully available, cached reading only, queued, or
-  unavailable with a stated reason.
+  unavailable with a stated reason;
+- **What it may use** — bounded CPU, memory, storage, network, queue, and device
+  needs for each operating mode; and
+- **How it yields** — which work may be reduced, paused, cancelled,
+  checkpointed, unloaded, or resumed without losing the user's work.
 
 The exact machine-readable names are provisional until the capability broker is
 implemented. Candidate capability families include:
@@ -114,6 +118,62 @@ A declaration is a request, not permission. The Deck's capability broker grants
 a revocable token scoped to one package, one provider, one operation, and a
 bounded lifetime. “Network access,” “computer access,” and “account access” are
 too broad to be valid user-facing grants.
+
+### Contention and bounded-work contract
+
+Contention management is a system responsibility. A cartridge author describes
+the application's needs and interruption behavior in plain language; the Guide
+runtime translates the accepted installation agreement into host controls and
+provider policy. An application cannot raise its own priority, enlarge its
+limits, retain an expired device lease, or bypass the Supervisor because it
+believes its work is important.
+
+The governing policy is [Resource Contention Contract 0](RESOURCE_CONTENTION_0.md).
+Critical tier 0 protects power management and hardware-immediate work; tier 1 is
+foreground interaction, tier 2 communications, tier 3 background work, and tier
+4 spare-capacity work. Normal contention preserves bounded progress for admitted
+lower tiers. A verified critical deadline may suspend those floors according to
+the installed agreement. For simultaneous video playback and file download,
+preserve playback and temporarily pause the download when both cannot fit.
+
+Every runtime operation must have an owner, an operating mode, a resource tier,
+bounded demand, a cancellation path, and a terminal outcome. Stateful work must
+also declare what can be checkpointed, what durability means, and whether it is
+safe to unload afterward. Exclusive devices use revocable leases; discovery and
+permission do not imply possession. CPU, memory, storage, network bandwidth and
+devices remain separate resources with separate evidence.
+
+Implementations should prevent avoidable contention before scheduling it:
+
+- partition private mutable state and use read-only sharing where practical;
+- serialize ownership-sensitive hardware through a broker or designated worker;
+- keep queues bounded, apply backpressure, and coalesce replaceable work;
+- let current pointer, button-release, resize, status and search state supersede
+  obsolete queued state;
+- perform blocking I/O and expensive preparation outside critical sections;
+- use a documented lock order and never wait indefinitely while holding a lock;
+- use version checks or transactions when optimistic updates are safe;
+- cache immutable results within explicit size, expiry and provenance limits;
+- place deadlines on provider operations, not on the user's reading or response;
+- make cancellation idempotent and report whether work stopped, saved, failed,
+  or is still completing.
+
+The Supervisor first reduces optional consumption, then requests cooperative
+yielding, checkpointing and unloading as permitted. Forced termination is a
+bounded last resort for an authenticated critical deadline or an unresponsive
+component, and must report possible data loss. A pause is not evidence that
+memory was reclaimed; a stop acknowledgement is not evidence that capacity is
+available; fresh host or provider measurements establish the result. Dependency
+holders require handoff or priority inheritance rather than blind termination.
+
+Conformance tests must create real contention and verify user-visible behavior:
+Power and input remain responsive; audio/video meet measured continuity targets;
+obsolete events do not replay; queues and memory remain bounded; lower-tier work
+makes its promised progress or visibly enters a defined deferred state; saved
+work survives interruption; and resources are measurably released after exit.
+The diagnostic record includes instance identity, agreement revision, tier,
+queue depth, high-water marks, requested action, deadline, acknowledgement and
+observed release without recording private content unnecessarily.
 
 ### Guide View
 
@@ -183,7 +243,7 @@ the present state supersedes obsolete high-frequency state. It also implements
 the project's non-aggression principle by bounding queues, retries, bandwidth,
 storage, and work requested from another device.
 
-## Wikipedia path: a document reader, not a web browser
+## Wikipedia path: a document reader using a constrained browser renderer
 
 The present reader has already proven search, result selection, article fetch,
 paragraphs, sections, links, and offline saves. Its weakness is that it converts
@@ -203,11 +263,13 @@ preserve useful structure without attempting to reproduce a desktop webpage.
    and external resource loads.
 6. Send or store the Guide Article Document, then let Guide View render it.
 
-The parser must be a converter with an explicit allow-list, not a miniature web
-browser. Links become typed actions. Internal article links reopen the Wikipedia
-provider; citations open a reference card; external links show their destination
-and require confirmation. Images are opt-in, size-bounded, cached with
-attribution, and decoded to a safe display size before the Deck renders them.
+The parser must remain a converter with an explicit allow-list. NetSurf may be
+used as the lightweight HTML/CSS renderer, but it does not receive arbitrary
+remote pages or scripts. Links become typed actions. Internal article links
+reopen the Wikipedia provider; citations open a reference card; external links
+show their destination and require confirmation. Images are opt-in,
+size-bounded, cached with attribution, and decoded to a safe display size before
+the Deck renders them.
 
 The result should provide:
 
@@ -399,6 +461,8 @@ The future runtime should be split into replaceable, testable components:
 - **Capability Broker** — explains, grants, expires, logs, and revokes powers;
 - **Provider Registry** — discovers local, Node, and cartridge providers and
   reports honest availability;
+- **Resource Supervisor** — admits work, applies installed limits and priorities,
+  coordinates yielding/checkpointing, and verifies that resources were released;
 - **Event Journal** — bounded delivery, acknowledgement, offline queueing, and
   stale-state labeling;
 - **Private Store** — per-application settings, cache, saves, and quotas;
@@ -434,14 +498,20 @@ is the practical safeguard against incompatible branded splinters.
 
 ## Security, autonomy, and non-aggression
 
-The following are release gates rather than aspirations:
+Owner clarification, 22 September 2026: the original social "cyberspace"
+principles do not impose anonymity, absolute isolation or zero communication
+risk throughout GuideOS. Apply protections according to the deployment's actual
+exposure and data. The following describe security expectations to scope to that
+deployment; they are not a blanket gate on all local development or functionality.
+Explicit owner decisions remain requirements. Added restrictions need a concrete
+engineering justification and a proportionate cost.
 
 - credentials stay with the service's official client or the Node's protected
   credential store; they are never placed in a cartridge;
 - Node traffic moves to mutually authenticated encryption before use on an
   untrusted network;
-- each provider is isolated from unrelated files, devices, accounts, and other
-  providers;
+- provider access is limited according to its role and trust context; logical
+  separation does not require a separate sandbox for every trusted component;
 - all remote content is parsed through size, type, nesting, time, and memory
   limits before display;
 - packages are inspectable, hashed, signed in a later format, and installed
@@ -453,8 +523,9 @@ The following are release gates rather than aspirations:
 - logs explain actions without retaining passwords, tokens, private message
   bodies, or private filenames unnecessarily;
 - global exit and safe shutdown remain outside application control;
-- threat modeling, adversarial tests, and independent cryptographic review are
-  mandatory under security proofing before public-network claims.
+- public-network security claims require evidence appropriate to the exposure;
+  use established security mechanisms and focus additional review and adversarial
+  testing on the threats and mechanisms the implementation actually introduces.
 
 ## Proposed resource budgets for the RG35XX H
 

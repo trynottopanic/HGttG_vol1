@@ -9,8 +9,11 @@ param(
     [string] $Summary = '',
     [string[]] $Capability = @(),
     [ValidateSet('', 'feature.wifi.rg35xxh', 'feature.developer-link.rg35xxh',
-                 'application.wikipedia.rg35xxh')]
+                 'application.wikipedia.rg35xxh',
+                 'application.semiotic-engine.rg35xxh',
+                 'application.emulation.rg35xxh', 'application.install.v0')]
     [string] $InstallAction = '',
+    [string] $ApplicationModule = '',
     [Parameter(Mandatory = $true)] [string] $Output,
     [switch] $Force
 )
@@ -49,6 +52,16 @@ if (-not $outputFolder) { $outputFolder = (Get-Location).Path }
 [System.IO.Directory]::CreateDirectory($outputFolder) | Out-Null
 if ((Test-Path -LiteralPath $outputPath) -and -not $Force) {
     throw "Output already exists. Use -Force to replace it: $outputPath"
+}
+
+if ($InstallAction -eq 'application.install.v0') {
+    if ($Kind -ne 'application' -or -not $ApplicationModule) { throw 'Application profile requires -Kind application and -ApplicationModule.' }
+    $python = (Get-Command python -ErrorAction Stop).Source
+    $arguments = @('-X', 'utf8', (Join-Path $PSScriptRoot 'build_application.py'), $sourcePath, $outputPath, '--id', $Id, '--name', $Name, '--version', $Version, '--summary', $Summary, '--module', $ApplicationModule)
+    foreach ($cap in $Capability) { $arguments += @('--capability', $cap) }
+    & $python @arguments
+    if ($LASTEXITCODE -ne 0) { throw 'Application cartridge validation failed.' }
+    return
 }
 
 $sourceItems = @(Get-ChildItem -LiteralPath $sourcePath -Recurse -Force)

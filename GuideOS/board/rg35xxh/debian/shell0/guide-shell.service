@@ -1,0 +1,22 @@
+[Unit]
+Description=GuideOS exclusive shell integration slice
+Documentation=file:/usr/share/doc/guideos-shell0/README.md
+After=local-fs.target systemd-udev-settle.service
+Wants=systemd-udev-settle.service
+Conflicts=getty@tty1.service guide-diagnostic.service
+ConditionPathExists=/dev/fb0
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/lib/guideos/shell0/guide_shell.py
+Restart=on-failure
+RestartSec=2s
+TimeoutStopSec=8s
+KillMode=mixed
+NoNewPrivileges=yes
+PrivateTmp=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

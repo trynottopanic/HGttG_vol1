@@ -1,0 +1,65 @@
+[screen]
+schema_version = 0
+pattern = "audio-player"
+display_profile = "deck-640x480"
+output = "audio-player-renderer-draft-0.png"
+
+[header]
+identity = "The Guide / Audio"
+title = ""
+
+[header.accessory]
+kind = "text"
+value = "Don't Panic."
+color = "ink"
+
+[track]
+title = "Cultivando"
+source = "Local library"
+output = "Bluetooth earbuds"
+output_color = "green"
+artwork = "guide-sprig"
+
+[transport]
+state = "paused"
+action = "Pause"
+elapsed = "02:14"
+duration = "04:08"
+progress = 0.549
+accent = "rust"
+
+[[queue.items]]
+label = "Cultivando"
+selected = true
+
+[[queue.items]]
+label = "En junio"
+selected = false
+
+[[queue.items]]
+label = "Rosa blanca"
+selected = false
+
+[[footer.actions]]
+button = "B"
+label = "Back"
+color = "blue"
+
+[[footer.actions]]
+button = "A"
+label = "Select"
+color = "blue"
+
+[[footer.actions]]
+button = "X"
+label = "Queue"
+color = "blue"
+
+[[footer.actions]]
+button = "Menu"
+label = "Home"
+color = "blue"
+
+[footer.accessory]
+kind = "battery"
+value = 78

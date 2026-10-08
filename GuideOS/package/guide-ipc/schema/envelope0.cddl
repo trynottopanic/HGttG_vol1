@@ -1,0 +1,25 @@
+; GuideOS Envelope 0 common payload shapes.
+; This is a design fixture for the spike, not a generated production schema.
+
+envelope-request = {
+  0: uint .gt 0,             ; interface operation
+  1: int-key-map,            ; operation arguments
+  2: uint,                   ; CLOCK_BOOTTIME deadline nanoseconds
+  ? 3: bytes .size 16        ; durable retry token
+}
+
+envelope-reply = {
+  0: uint,                   ; universal outcome
+  1: int-key-map             ; result or error detail
+}
+
+envelope-event = {
+  0: uint .gt 0,             ; interface event
+  1: int-key-map
+}
+
+envelope-cancel = {}
+
+int-key-map = {* uint => profile-value}
+profile-value = uint / int / bool / nil / text / bytes /
+                [* profile-value] / int-key-map

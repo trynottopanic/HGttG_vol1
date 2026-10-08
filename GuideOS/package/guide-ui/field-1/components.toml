@@ -1,0 +1,56 @@
+[schema]
+version = 0
+display_profile = "deck-640x480"
+
+[header]
+left = 16
+right = 624
+baseline_y = 18
+rule_y = 34
+battery_x = 565
+battery_y = 10
+battery_width = 31
+battery_height = 15
+
+[footer]
+left = 16
+right = 624
+rule_y = 424
+button_top = 441
+baseline_y = 453
+
+[button_badge]
+minimum_width = 24
+horizontal_padding = 12
+label_gap = 7
+item_gap = 18
+height = 24
+radius = 12
+
+[standard_menu]
+left = 71
+right = 568
+top = 70
+row_height = 58
+row_gap = 8
+visible_rows = 5
+label_x = 92
+scrollbar_x = 48
+scrollbar_top = 70
+scrollbar_bottom = 390
+scrollbar_width = 5
+
+[facts]
+left = 16
+right = 624
+top = 62
+bottom = 404
+row_height = 36
+label_x = 34
+value_x = 606
+maximum_rows = 9
+
+[notice]
+left = 34
+right = 606
+baseline_y = 395

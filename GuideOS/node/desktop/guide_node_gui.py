@@ -15,14 +15,14 @@ from guide_node_server import NodeRuntime
 
 class GuideNodeWindow:
     def __init__(self, root: tk.Tk, http_port: int, discovery_port: int,
-                 media_folder: str = "") -> None:
+                 media_folder: str = "", semiotic_enabled: bool | None = None) -> None:
         self.root = root
         self.root.title("Guide Desktop Node — fixed-layout build")
         self.root.geometry("640x780")
         self.root.minsize(600, 740)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
-        self.state = NodeState(auto_prepare=True)
+        self.state = NodeState(auto_prepare=True, semiotic_enabled=semiotic_enabled)
         if media_folder:
             self.state.media.set_folder(media_folder)
             self.state.prepare_media()
@@ -57,6 +57,10 @@ class GuideNodeWindow:
         buttons.pack(anchor="w", pady=(3, 18))
         tk.Button(buttons, text="New pairing code", command=self.rotate, padx=12, pady=5).pack(side="left")
         tk.Button(buttons, text="Stop Node", command=self.stop, padx=12, pady=5).pack(side="left", padx=8)
+        tk.Label(buttons, text="AT Field").pack(side="left")
+        self.at_field_choice = tk.StringVar(value=self.state.at_field.mode.value.title())
+        tk.OptionMenu(buttons, self.at_field_choice, "Closed", "Familiar", "Open",
+                      command=self.change_at_field).pack(side="left")
 
         tk.Label(frame, text="MEDIA FOLDER", font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(2, 3))
         self.media_status = tk.StringVar(value="No folder selected")
@@ -155,6 +159,17 @@ class GuideNodeWindow:
 
     def rotate(self) -> None:
         self.code.set(self.state.rotate_pairing_code())
+
+    def change_at_field(self, choice: str) -> None:
+        try:
+            if choice.lower() != self.state.at_field.mode.value:
+                preview = self.state.preview_at_field(choice.lower())
+                if messagebox.askyesno("AT Field", preview + "\n\nApply this setting?"):
+                    self.state.set_at_field(choice.lower())
+        except (OSError, ValueError) as error:
+            messagebox.showerror("AT Field", f"Could not save the setting.\n\n{error}")
+        finally:
+            self.at_field_choice.set(self.state.at_field.mode.value.title())
 
     def choose_media(self) -> None:
         selected = filedialog.askdirectory(title="Choose the folder this Node may share")
@@ -415,9 +430,12 @@ def main() -> None:
     parser.add_argument("--discovery-port", type=int, default=DEFAULT_DISCOVERY_PORT)
     parser.add_argument("--media-folder", default="",
                         help="Select and remember one media folder when the Node starts")
+    parser.add_argument("--semiotic-engine", action="store_true", default=None,
+                        help="Explicitly offer the separately installed local Semiotic Engine")
     args = parser.parse_args()
     root = tk.Tk()
-    GuideNodeWindow(root, args.port, args.discovery_port, args.media_folder)
+    GuideNodeWindow(root, args.port, args.discovery_port, args.media_folder,
+                    args.semiotic_engine)
     root.mainloop()
 
 

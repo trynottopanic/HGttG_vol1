@@ -1,0 +1,22 @@
+[Unit]
+Description=Guide local deployment controller
+After=guide-deploy-recover.service
+Requires=guide-deploy-recover.service
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/lib/guideos/deploy/deploy_server.py serve
+Restart=on-failure
+RestartSec=2
+UMask=0077
+RuntimeDirectory=guideos-deploy
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+Nice=10
+MemoryMax=96M
+TasksMax=16
+NoNewPrivileges=yes
+PrivateTmp=yes
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+[Install]
+WantedBy=multi-user.target

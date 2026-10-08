@@ -1,0 +1,368 @@
+{
+  "format": 1,
+  "invalid": [
+    {
+      "operation": 0,
+      "reason": "operation-zero"
+    },
+    {
+      "arguments": {
+        "31": 0
+      },
+      "operation": 1,
+      "reason": "unknown-field"
+    }
+  ],
+  "valid": [
+    {
+      "arguments": {
+        "0": 0
+      },
+      "interface": "guide.supervisor.lifecycle",
+      "operation": 1
+    },
+    {
+      "arguments": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "interface": "guide.supervisor.lifecycle",
+      "operation": 2
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": 0
+      },
+      "interface": "guide.supervisor.lifecycle",
+      "operation": 3
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": 0
+      },
+      "interface": "guide.supervisor.lifecycle",
+      "operation": 4
+    },
+    {
+      "arguments": {
+        "0": 0
+      },
+      "interface": "guide.supervisor.lifecycle",
+      "operation": 5
+    },
+    {
+      "arguments": {
+        "0": 0
+      },
+      "interface": "guide.supervisor.lifecycle",
+      "operation": 6
+    },
+    {
+      "arguments": {},
+      "interface": "guide.broker.control",
+      "operation": 1
+    },
+    {
+      "arguments": {
+        "0": 0
+      },
+      "interface": "guide.broker.control",
+      "operation": 2
+    },
+    {
+      "arguments": {
+        "0": 0
+      },
+      "interface": "guide.broker.control",
+      "operation": 3
+    },
+    {
+      "arguments": {
+        "0": 0
+      },
+      "interface": "guide.broker.control",
+      "operation": 4
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000"
+      },
+      "interface": "guide.broker.control",
+      "operation": 5
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": 0
+      },
+      "interface": "guide.broker.control",
+      "operation": 6
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": 0
+      },
+      "interface": "guide.broker.control",
+      "operation": 7
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000"
+      },
+      "interface": "guide.broker.health",
+      "operation": 1
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.installer.control",
+      "operation": 1
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.installer.control",
+      "operation": 2
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.installer.control",
+      "operation": 3
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.installer.control",
+      "operation": 4
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.installer.control",
+      "operation": 5
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.installer.control",
+      "operation": 6
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.installer.control",
+      "operation": 7
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.installer.control",
+      "operation": 8
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.installer.control",
+      "operation": 9
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.storage.cartridges",
+      "operation": 1
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.storage.cartridges",
+      "operation": 2
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "interface": "guide.broker.provider",
+      "operation": 1
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000"
+      },
+      "interface": "guide.media.library",
+      "operation": 1
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": null,
+        "2": 0,
+        "3": null,
+        "4": null,
+        "5": null
+      },
+      "interface": "guide.media.library",
+      "operation": 2
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0
+      },
+      "interface": "guide.media.library",
+      "operation": 3
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0,
+        "3": null,
+        "4": null
+      },
+      "interface": "guide.media.library",
+      "operation": 4
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": 0
+      },
+      "interface": "guide.media.library",
+      "operation": 5
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0,
+        "3": null,
+        "4": null,
+        "5": null,
+        "6": null
+      },
+      "interface": "guide.media.session",
+      "operation": 1
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0
+      },
+      "interface": "guide.media.session",
+      "operation": 2
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0
+      },
+      "interface": "guide.media.session",
+      "operation": 3
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0,
+        "3": 0
+      },
+      "interface": "guide.media.session",
+      "operation": 4
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0,
+        "3": "00000000000000000000000000000000"
+      },
+      "interface": "guide.media.session",
+      "operation": 5
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0,
+        "3": null
+      },
+      "interface": "guide.media.session",
+      "operation": 6
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0,
+        "3": "00000000000000000000000000000000"
+      },
+      "interface": "guide.media.session",
+      "operation": 7
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0
+      },
+      "interface": "guide.media.session",
+      "operation": 8
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0
+      },
+      "interface": "guide.media.session",
+      "operation": 9
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000"
+      },
+      "interface": "guide.media.session",
+      "operation": 10
+    },
+    {
+      "arguments": {
+        "0": "00000000000000000000000000000000",
+        "1": "00000000000000000000000000000000",
+        "2": 0
+      },
+      "interface": "guide.media.session",
+      "operation": 11
+    },
+    {
+      "arguments": {
+        "0": "7b7d"
+      },
+      "interface": "guide.installer.parser",
+      "operation": 1
+    }
+  ]
+}

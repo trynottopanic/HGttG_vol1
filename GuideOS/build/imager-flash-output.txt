@@ -1,3 +1,0 @@
-IMAGER_EXIT_CODE=0
-IMAGE=E:\DGttG\HGttG_vol1\GuideOS\build\GuideOS-RG35XXH-ddr4.img
-DESTINATION=\\.\PhysicalDrive4

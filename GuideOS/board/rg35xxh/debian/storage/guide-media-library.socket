@@ -1,0 +1,14 @@
+[Unit]
+Description=GuideOS storage-owned Media Library endpoint
+
+[Socket]
+ListenSequentialPacket=/run/guideos/brokers/media-library.sock
+SocketMode=0660
+SocketUser=guide-broker
+SocketGroup=guide-apps
+DirectoryMode=0755
+Service=guide-storage.service
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target

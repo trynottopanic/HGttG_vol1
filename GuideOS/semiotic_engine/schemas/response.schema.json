@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://guide.invalid/schemas/semiotic-engine-response-0.json",
+  "title": "Semiotic Engine Protocol 0 completed response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "request_id", "job_id", "state", "result", "uncertainty", "provenance", "proposed_actions", "timing"],
+  "properties": {
+    "protocol": {"const": "guide-se/0"},
+    "request_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "job_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "state": {"const": "complete"},
+    "result": {
+      "type": "object", "additionalProperties": false,
+      "required": ["format", "text"],
+      "properties": {
+        "format": {"const": "guide-summary/0"},
+        "text": {"type": "string", "maxLength": 4000}
+      }
+    },
+    "uncertainty": {"type": "string", "maxLength": 500},
+    "provenance": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"type": "string"}},
+    "proposed_actions": {"type": "array", "maxItems": 0},
+    "timing": {
+      "type": "object", "additionalProperties": false,
+      "required": ["queued_ms", "work_ms"],
+      "properties": {
+        "queued_ms": {"type": "integer", "minimum": 0},
+        "work_ms": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

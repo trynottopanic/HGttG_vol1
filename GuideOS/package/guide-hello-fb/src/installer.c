@@ -38,6 +38,20 @@
 #define WIKIPEDIA_RECORD "/var/lib/guideos/features/guide.wikipedia-0.3.json"
 #define GUIDE_WIKI_APP_DIR "/usr/lib/guideos/apps/wikipedia-0.3"
 
+#define SEMIOTIC_ID "guide.semiotic-engine.interface"
+#define SEMIOTIC_VERSION "0.1.0"
+#define SEMIOTIC_ACTION "application.semiotic-engine.rg35xxh"
+#define SEMIOTIC_ARCHIVE "/media/guide-card/GUIDE/CARTRIDGES/guide.semiotic-engine.interface-0.1.0.guide"
+#define SEMIOTIC_ARCHIVE_SHA256 "89f2e1802404dcdb28b4a1e93c6a80834af39d9b50dfa0a52eec3d238f824722"
+#define SEMIOTIC_RECORD "/var/lib/guideos/features/guide.semiotic-engine.interface.json"
+
+#define EMULATION_ID "guide.emulation"
+#define EMULATION_VERSION "0.1.3"
+#define EMULATION_ACTION "application.emulation.rg35xxh"
+#define EMULATION_ARCHIVE "/media/guide-card/GUIDE/CARTRIDGES/guide.emulation-0.1.3.guide"
+#define EMULATION_ARCHIVE_SHA256 "5871994b52cf257781f2f5fc93037db3f59c2be77ee4d78dad4afa931e84d5ea"
+#define EMULATION_RECORD "/var/lib/guideos/features/guide.emulation.json"
+
 struct install_file {
     const char *entry;
     const char *destination;
@@ -92,6 +106,43 @@ static const struct install_file wikipedia_files[] = {
     {"CONTENT/runtime/lib/libssl.so.3", GUIDE_WIKI_APP_DIR "/runtime/lib/libssl.so.3", "9caeda74e38bdc70e18d529cdd34c195fa51895896f95bba176e4cf7d9a0a80c", 0755},
     {"CONTENT/runtime/python3.12/lib-dynload/_hashlib.cpython-312-aarch64-linux-gnu.so", GUIDE_WIKI_APP_DIR "/runtime/python3.12/lib-dynload/_hashlib.cpython-312-aarch64-linux-gnu.so", "61d5b08a3e2545f4d929ad9b6aa8c5d7894d69e0c8137152b8896bab787f95db", 0755},
     {"CONTENT/runtime/python3.12/lib-dynload/_ssl.cpython-312-aarch64-linux-gnu.so", GUIDE_WIKI_APP_DIR "/runtime/python3.12/lib-dynload/_ssl.cpython-312-aarch64-linux-gnu.so", "0d48525ad51140fea4f04049ca1b9422a27d2126569a6cd665a08ab99e57f4b3", 0755}
+};
+
+/* These files form the Wikipedia reader built into the verified GuideOS
+ * image.  Keep this separate from wikipedia_files: that table is the signed
+ * 0.3 cartridge contract and must remain capable of validating old media. */
+static const struct install_file wikipedia_system_files[] = {
+    {"", GUIDE_WIKI_APP_DIR "/guide_wikipedia_client.py", "691737a06d0a0f87597d0d3a22036e5e052e02a2037c6614c49cac01a6f6bb92", 0644},
+    {"", GUIDE_WIKI_APP_DIR "/guide_wikipedia_html.py", "50aede20da65f3d8ca480ee9dc51891e84f798b7c33a054e4e4cc02cab411426", 0644},
+    {"", GUIDE_WIKI_APP_DIR "/guide_wikipedia_netsurf.py", "f3e7c2de2b9ab8d0a29603f6118caf2fd7693efa06cab3cc12d086913715eda2", 0644},
+    {"", "/usr/bin/guide-wikipedia-rich", "8d21e29e9f77d4895f0daf01c82c56f2aea8b46883073b39767c59a39b2ebf10", 0755},
+    {"", "/usr/lib/guideos/netsurf/netsurf-fb", "20f0fe6bd9570c034e320c3361194b97f208ef41cc8e94badd6a4672857f0d9c", 0755}
+};
+
+static const struct install_file semiotic_files[] = {
+    {"CONTENT/LICENSES.txt", "/usr/share/guideos/semiotic-engine/LICENSES.txt", "8a37812401410d248df9e0de64b6176c4de6c7b0a9e86df42d6042fd79877495", 0644},
+    {"CONTENT/PROVENANCE.txt", "/usr/share/guideos/semiotic-engine/PROVENANCE.txt", "f4167df96d6fc99ecf842b610d24c8f6b802a58e2a30f6aee06fbd26ae8e95f4", 0644},
+    {"CONTENT/README.txt", "/usr/share/guideos/semiotic-engine/README.txt", "b0870fedf611ad3e4d9ed3dec6af896a9582ed0c09b7b669b2afab91bd12166d", 0644},
+    {"CONTENT/RUNTIME-MAP.json", "/usr/share/guideos/semiotic-engine/RUNTIME-MAP.json", "eb13dc73ce2ca815ce1b9521954cd6c7714b603a5f5ef5c3a78abe0370fe8e44", 0644},
+    {"CONTENT/app/guide_se_deck.py", "/usr/bin/guide-se-deck", "0c6bb7bb7f9f36f712ac65dd63b29200e29d04a32e524b0bdb4d56bdc6e17c6e", 0755}
+};
+
+static const struct install_file emulation_files[] = {
+    {"CONTENT/bin/guide-emulator", "/usr/bin/guide-emulator", "760034b45c7bc4e24ee09b217875750e0476dffe1ce3c9e841b564a253242205", 0755},
+    {"CONTENT/cores/fceumm_libretro.so", "/usr/lib/guideos/emulation/cores/fceumm_libretro.so", "c0ceb31c045b6bacb053170f37c37e921d81d6f8e4abaf98725e961f009615b1", 0755},
+    {"CONTENT/cores/gambatte_libretro.so", "/usr/lib/guideos/emulation/cores/gambatte_libretro.so", "d8ebb32ff41f80f687105362d2cf238dfe497fc77ff03ac1ff1246fb6046c099", 0755},
+    {"CONTENT/cores/genesis_plus_gx_libretro.so", "/usr/lib/guideos/emulation/cores/genesis_plus_gx_libretro.so", "77f31e62a453c105a2b83d859224c638c07f46184275d49efb215d497fae22b8", 0755},
+    {"CONTENT/cores/mgba_libretro.so", "/usr/lib/guideos/emulation/cores/mgba_libretro.so", "2599b2abbbebed5df948a0da662d0892c79043b087e03137beeeb09ec3ba90e5", 0755},
+    {"CONTENT/cores/pcsx_rearmed_libretro.so", "/usr/lib/guideos/emulation/cores/pcsx_rearmed_libretro.so", "0b7f089774aee66a275ef98ef94d7f43f3247969ec2857b55686a381c13779d9", 0755},
+    {"CONTENT/cores/snes9x2010_libretro.so", "/usr/lib/guideos/emulation/cores/snes9x2010_libretro.so", "482104e5a2ecf7ca1915aa54678913f99566572ec53cec61b8193a89d4b7e30c", 0755},
+    {"CONTENT/licenses/FCEUmm-Copying.txt", "/usr/share/guideos/emulation/FCEUmm-Copying.txt", "a6996dcf0c334281f734560926e079b2dbbd5b78e81c0ca00a413ec01e1cd2fb", 0644},
+    {"CONTENT/licenses/Gambatte-COPYING.txt", "/usr/share/guideos/emulation/Gambatte-COPYING.txt", "ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6", 0644},
+    {"CONTENT/licenses/Genesis-Plus-GX-LICENSE.txt", "/usr/share/guideos/emulation/Genesis-Plus-GX-LICENSE.txt", "642c163624269243d1f6b29d759d4e3a2d161bdc272c90d82ecbeec82ae26755", 0644},
+    {"CONTENT/licenses/mGBA-LICENSE.txt", "/usr/share/guideos/emulation/mGBA-LICENSE.txt", "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85", 0644},
+    {"CONTENT/licenses/PCSX-ReARMed-COPYING.txt", "/usr/share/guideos/emulation/PCSX-ReARMed-COPYING.txt", "0efb4db8000c609bd2f06e61fcbc59af05519d122f5b3597b7c493224946c61d", 0644},
+    {"CONTENT/licenses/Snes9x-LICENSE.txt", "/usr/share/guideos/emulation/Snes9x-LICENSE.txt", "2d5875c99c5895e9e8d104dd777dc7fdeee0fd96bed0bca38e83b90b480d2523", 0644},
+    {"CONTENT/PROVENANCE.txt", "/usr/share/guideos/emulation/PROVENANCE.txt", "454f05621c115fd144ccaa0560bf0d791888aee89c557f1c7440fb7774d0ce13", 0644},
+    {"CONTENT/README.txt", "/usr/share/guideos/emulation/README.txt", "7812e55269eebdc6125e05fe99bcced6ee8feefbb7b2b2bdfe4776bd014944eb", 0644}
 };
 
 static void result(char *message, size_t size, const char *format, ...)
@@ -543,6 +594,17 @@ int guide_wikipedia_installed(void)
 {
     size_t index;
     char actual[65];
+
+    for (index = 0;
+         index < sizeof(wikipedia_system_files) / sizeof(wikipedia_system_files[0]);
+         ++index) {
+        if (guide_sha256_file(wikipedia_system_files[index].destination, actual) != 0 ||
+            strcmp(actual, wikipedia_system_files[index].sha256) != 0)
+            break;
+    }
+    if (index == sizeof(wikipedia_system_files) / sizeof(wikipedia_system_files[0]))
+        return 1;
+
     for (index = 0; index < sizeof(wikipedia_files) / sizeof(wikipedia_files[0]); ++index)
         if (guide_sha256_file(wikipedia_files[index].destination, actual) != 0 ||
             strcmp(actual, wikipedia_files[index].sha256) != 0) return 0;
@@ -646,5 +708,237 @@ wikipedia_activate_failed:
     if (record >= 0) close(record);
     unlink(WIKIPEDIA_RECORD ".new"); unlink(WIKIPEDIA_RECORD);
     wikipedia_rollback(installed, transaction, log);
+    result(message, message_size, "INSTALL FAILED AND WAS UNDONE"); return -1;
+}
+
+int guide_semiotic_installed(void)
+{
+    size_t index;
+    char actual[65];
+    for (index = 0; index < sizeof(semiotic_files) / sizeof(semiotic_files[0]); ++index)
+        if (guide_sha256_file(semiotic_files[index].destination, actual) != 0 ||
+            strcmp(actual, semiotic_files[index].sha256) != 0) return 0;
+    return access(SEMIOTIC_RECORD, F_OK) == 0;
+}
+
+int guide_semiotic_install_supported(const struct guide_cartridge *item)
+{
+    return item && item->verification == GUIDE_CARTRIDGE_VERIFIED &&
+           strcmp(item->id, SEMIOTIC_ID) == 0 &&
+           strcmp(item->version, SEMIOTIC_VERSION) == 0 &&
+           strcmp(item->action, SEMIOTIC_ACTION) == 0 &&
+           strcmp(item->sha256, SEMIOTIC_ARCHIVE_SHA256) == 0;
+}
+
+static void semiotic_cleanup(const char *transaction)
+{
+    size_t index;
+    char path[PATH_MAX];
+    for (index = 0; index < sizeof(semiotic_files) / sizeof(semiotic_files[0]); ++index)
+        if (staging_path(path, sizeof(path), transaction, index) == 0) unlink(path);
+    rmdir(transaction);
+}
+
+static void semiotic_rollback(size_t installed, const char *transaction, FILE *log)
+{
+    while (installed > 0) unlink(semiotic_files[--installed].destination);
+    semiotic_cleanup(transaction);
+    fprintf(log, "semiotic interface installer rollback complete\n");
+    fflush(log);
+}
+
+int guide_semiotic_install(const struct guide_cartridge *item, FILE *log,
+                           char *message, size_t message_size)
+{
+    struct utsname system_name;
+    char archive_hash[65], transaction[128], staged[160], actual[65];
+    size_t index, installed = 0;
+    int record = -1;
+    const char *record_text =
+        "{\"id\":\"guide.semiotic-engine.interface\",\"version\":\"0.1.0\","
+        "\"archiveSha256\":\"" SEMIOTIC_ARCHIVE_SHA256 "\"}\n";
+    static const char *paths[] = {
+        "/var/lib/guideos", "/var/lib/guideos/install-staging",
+        "/var/lib/guideos/features", "/usr/share/guideos",
+        "/usr/share/guideos/semiotic-engine"
+    };
+
+    if (!guide_semiotic_install_supported(item)) {
+        result(message, message_size, "PACKAGE NOT TRUSTED FOR INSTALL"); return -1;
+    }
+    if (guide_semiotic_installed()) {
+        result(message, message_size, "ENGINE INTERFACE ALREADY INSTALLED"); return 0;
+    }
+    if (uname(&system_name) != 0 || strcmp(system_name.machine, "aarch64") != 0 ||
+        strcmp(system_name.release, "4.9.170") != 0) {
+        result(message, message_size, "WRONG DECK OR KERNEL"); return -1;
+    }
+    if (guide_sha256_file(SEMIOTIC_ARCHIVE, archive_hash) != 0 ||
+        strcmp(archive_hash, SEMIOTIC_ARCHIVE_SHA256) != 0) {
+        result(message, message_size, "CARTRIDGE HASH CHANGED"); return -1;
+    }
+    for (index = 0; index < sizeof(paths) / sizeof(paths[0]); ++index)
+        if (make_directory(paths[index]) != 0) {
+            result(message, message_size, "COULD NOT PREPARE STORAGE"); return -1;
+        }
+    for (index = 0; index < sizeof(semiotic_files) / sizeof(semiotic_files[0]); ++index) {
+        errno = 0;
+        if (lstat(semiotic_files[index].destination, &(struct stat){0}) == 0 || errno != ENOENT) {
+            result(message, message_size, "EXISTING SYSTEM FILE REFUSED"); return -1;
+        }
+    }
+    snprintf(transaction, sizeof(transaction),
+             "/var/lib/guideos/install-staging/semiotic-%ld", (long)getpid());
+    if (mkdir(transaction, 0700) != 0) {
+        result(message, message_size, "COULD NOT CREATE SAFE STAGING"); return -1;
+    }
+    for (index = 0; index < sizeof(semiotic_files) / sizeof(semiotic_files[0]); ++index) {
+        if (staging_path(staged, sizeof(staged), transaction, index) != 0 ||
+            extract_entry(SEMIOTIC_ARCHIVE, semiotic_files[index].entry, staged) != 0 ||
+            guide_sha256_file(staged, actual) != 0 ||
+            strcmp(actual, semiotic_files[index].sha256) != 0) {
+            result(message, message_size, "PAYLOAD FILE FAILED VERIFICATION");
+            semiotic_rollback(installed, transaction, log); return -1;
+        }
+    }
+    for (index = 0; index < sizeof(semiotic_files) / sizeof(semiotic_files[0]); ++index) {
+        if (staging_path(staged, sizeof(staged), transaction, index) != 0 ||
+            copy_new_file(staged, semiotic_files[index].destination,
+                          semiotic_files[index].mode) != 0) {
+            result(message, message_size, "INSTALL FAILED AND WAS UNDONE");
+            semiotic_rollback(installed, transaction, log); return -1;
+        }
+        ++installed;
+    }
+    record = open(SEMIOTIC_RECORD ".new", O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0644);
+    if (record < 0 || write(record, record_text, strlen(record_text)) != (ssize_t)strlen(record_text) ||
+        fsync(record) != 0) goto semiotic_activate_failed;
+    close(record); record = -1;
+    if (link(SEMIOTIC_RECORD ".new", SEMIOTIC_RECORD) != 0) goto semiotic_activate_failed;
+    unlink(SEMIOTIC_RECORD ".new");
+    sync(); semiotic_cleanup(transaction);
+    result(message, message_size, "ENGINE INTERFACE INSTALLED");
+    fprintf(log, "semiotic interface installer success\n"); fflush(log); return 0;
+
+semiotic_activate_failed:
+    if (record >= 0) close(record);
+    unlink(SEMIOTIC_RECORD ".new"); unlink(SEMIOTIC_RECORD);
+    semiotic_rollback(installed, transaction, log);
+    result(message, message_size, "INSTALL FAILED AND WAS UNDONE"); return -1;
+}
+
+int guide_emulation_installed(void)
+{
+    size_t index;
+    char actual[65];
+    for (index = 0; index < sizeof(emulation_files) / sizeof(emulation_files[0]); ++index)
+        if (guide_sha256_file(emulation_files[index].destination, actual) != 0 ||
+            strcmp(actual, emulation_files[index].sha256) != 0) return 0;
+    return access(EMULATION_RECORD, F_OK) == 0;
+}
+
+int guide_emulation_install_supported(const struct guide_cartridge *item)
+{
+    return item && item->verification == GUIDE_CARTRIDGE_VERIFIED &&
+           strcmp(item->id, EMULATION_ID) == 0 &&
+           strcmp(item->version, EMULATION_VERSION) == 0 &&
+           strcmp(item->action, EMULATION_ACTION) == 0 &&
+           strcmp(item->sha256, EMULATION_ARCHIVE_SHA256) == 0;
+}
+
+static void emulation_cleanup(const char *transaction)
+{
+    size_t index;
+    char path[PATH_MAX];
+    for (index = 0; index < sizeof(emulation_files) / sizeof(emulation_files[0]); ++index)
+        if (staging_path(path, sizeof(path), transaction, index) == 0) unlink(path);
+    rmdir(transaction);
+}
+
+static void emulation_rollback(size_t installed, const char *transaction, FILE *log)
+{
+    while (installed > 0) unlink(emulation_files[--installed].destination);
+    emulation_cleanup(transaction);
+    fprintf(log, "emulation installer rollback complete\n"); fflush(log);
+}
+
+int guide_emulation_install(const struct guide_cartridge *item, FILE *log,
+                            char *message, size_t message_size)
+{
+    struct utsname system_name;
+    char archive_hash[65], transaction[128], staged[160], actual[65];
+    size_t index, installed = 0;
+    int record = -1;
+    const char *record_text =
+        "{\"id\":\"guide.emulation\",\"version\":\"0.1.3\","
+        "\"archiveSha256\":\"" EMULATION_ARCHIVE_SHA256 "\"}\n";
+    static const char *paths[] = {
+        "/var/lib/guideos", "/var/lib/guideos/install-staging", "/var/lib/guideos/features",
+        "/usr/lib/guideos", "/usr/lib/guideos/emulation", "/usr/lib/guideos/emulation/cores",
+        "/usr/share/guideos", "/usr/share/guideos/emulation", "/data/guideos",
+        "/data/guideos/emulation", "/data/guideos/emulation/saves"
+    };
+
+    if (!guide_emulation_install_supported(item)) {
+        result(message, message_size, "PACKAGE NOT TRUSTED FOR INSTALL"); return -1;
+    }
+    if (guide_emulation_installed()) {
+        result(message, message_size, "EMULATION ALREADY INSTALLED"); return 0;
+    }
+    if (uname(&system_name) != 0 || strcmp(system_name.machine, "aarch64") != 0 ||
+        strcmp(system_name.release, "4.9.170") != 0) {
+        result(message, message_size, "WRONG DECK OR KERNEL"); return -1;
+    }
+    if (guide_sha256_file(EMULATION_ARCHIVE, archive_hash) != 0 ||
+        strcmp(archive_hash, EMULATION_ARCHIVE_SHA256) != 0) {
+        result(message, message_size, "CARTRIDGE HASH CHANGED"); return -1;
+    }
+    for (index = 0; index < sizeof(paths) / sizeof(paths[0]); ++index)
+        if (make_directory(paths[index]) != 0) {
+            result(message, message_size, "COULD NOT PREPARE STORAGE"); return -1;
+        }
+    for (index = 0; index < sizeof(emulation_files) / sizeof(emulation_files[0]); ++index) {
+        errno = 0;
+        if (lstat(emulation_files[index].destination, &(struct stat){0}) == 0 || errno != ENOENT) {
+            result(message, message_size, "EXISTING SYSTEM FILE REFUSED"); return -1;
+        }
+    }
+    snprintf(transaction, sizeof(transaction),
+             "/var/lib/guideos/install-staging/emulation-%ld", (long)getpid());
+    if (mkdir(transaction, 0700) != 0) {
+        result(message, message_size, "COULD NOT CREATE SAFE STAGING"); return -1;
+    }
+    for (index = 0; index < sizeof(emulation_files) / sizeof(emulation_files[0]); ++index) {
+        if (staging_path(staged, sizeof(staged), transaction, index) != 0 ||
+            extract_entry(EMULATION_ARCHIVE, emulation_files[index].entry, staged) != 0 ||
+            guide_sha256_file(staged, actual) != 0 ||
+            strcmp(actual, emulation_files[index].sha256) != 0) {
+            result(message, message_size, "PAYLOAD FILE FAILED VERIFICATION");
+            emulation_rollback(installed, transaction, log); return -1;
+        }
+    }
+    for (index = 0; index < sizeof(emulation_files) / sizeof(emulation_files[0]); ++index) {
+        if (staging_path(staged, sizeof(staged), transaction, index) != 0 ||
+            copy_new_file(staged, emulation_files[index].destination,
+                          emulation_files[index].mode) != 0) {
+            result(message, message_size, "INSTALL FAILED AND WAS UNDONE");
+            emulation_rollback(installed, transaction, log); return -1;
+        }
+        ++installed;
+    }
+    record = open(EMULATION_RECORD ".new", O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0644);
+    if (record < 0 || write(record, record_text, strlen(record_text)) != (ssize_t)strlen(record_text) ||
+        fsync(record) != 0) goto emulation_activate_failed;
+    close(record); record = -1;
+    if (link(EMULATION_RECORD ".new", EMULATION_RECORD) != 0) goto emulation_activate_failed;
+    unlink(EMULATION_RECORD ".new");
+    sync(); emulation_cleanup(transaction);
+    result(message, message_size, "EMULATION INSTALLED");
+    fprintf(log, "emulation installer success\n"); fflush(log); return 0;
+
+emulation_activate_failed:
+    if (record >= 0) close(record);
+    unlink(EMULATION_RECORD ".new"); unlink(EMULATION_RECORD);
+    emulation_rollback(installed, transaction, log);
     result(message, message_size, "INSTALL FAILED AND WAS UNDONE"); return -1;
 }

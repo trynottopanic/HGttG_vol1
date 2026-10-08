@@ -1,0 +1,19 @@
+--- a/libavutil/hwcontext_v4l2request.c
++++ b/libavutil/hwcontext_v4l2request.c
+@@ -638,6 +638,16 @@ static int v4l2request_probe_media_device(AVHWFramesContext *hwfc,
+         return ret;
+     }
+ 
++    // Guide's private runtime is admitted for Cedrus only. Do not acquire an
++    // unrelated camera/decoder merely because it is enumerated first.
++    struct media_device_info info = {0};
++    if (ioctl(fctxi->media_fd, MEDIA_IOC_DEVICE_INFO, &info) < 0 ||
++        strcmp(info.driver, "cedrus")) {
++        close(fctxi->media_fd);
++        fctxi->media_fd = -1;
++        return AVERROR(ENODEV);
++    }
++
+     // Probe video devices of current media device
+     ret = v4l2request_probe_video_devices(hwfc, udev_device_get_udev(device),
+                                           pixelformat, buffersize);

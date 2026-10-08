@@ -1,0 +1,42 @@
+[Unit]
+Description=Guide WebKitGTK prototype display session
+BindsTo=guide-shell.service
+After=guide-shell.service systemd-logind.service
+Conflicts=getty@tty2.service
+
+
+[Service]
+Type=simple
+User=guide-browser
+Group=guide-browser
+SupplementaryGroups=video render
+PAMName=login
+TTYPath=/dev/tty2
+# tty2 belongs to this service; do not wait indefinitely for a stale owner.
+StandardInput=tty-force
+TTYReset=yes
+TTYVHangup=yes
+RuntimeDirectory=guideos-browser
+RuntimeDirectoryMode=0700
+Environment=XDG_RUNTIME_DIR=/run/guideos-browser
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=XDG_SESSION_TYPE=wayland
+Environment=LIBSEAT_BACKEND=logind
+StandardOutput=journal
+StandardError=journal
+ExecStartPre=+/usr/bin/timeout 3s /usr/bin/chvt 2
+ExecStart=/usr/bin/dbus-run-session -- /usr/bin/python3 /usr/lib/guideos/browser/guide_browser_session.py --runtime /run/guideos-browser
+ExecStopPost=+/usr/bin/timeout 3s /usr/bin/chvt 1
+KillMode=control-group
+TimeoutStopSec=10
+TimeoutStartSec=15
+MemoryHigh=384M
+MemoryMax=512M
+TasksMax=256
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+InaccessiblePaths=-/data -/mnt -/media -/var/lib/guideos -/opt/guideos/applications -/run/guideos-storage -/run/guideos-player
+UMask=0077
+Restart=no

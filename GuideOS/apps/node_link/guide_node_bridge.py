@@ -290,9 +290,19 @@ def _trusted_nodes() -> dict[str, dict[str, str]]:
 
 
 def discover(discovery=discover_nodes) -> int:
-    nodes = discovery()[:MAX_NODES]
-    _atomic_private_json(CANDIDATES_FILE, nodes)
     trusted = _trusted_nodes()
+    nodes = discovery()[:MAX_NODES]
+    # Saved addresses permit remembered peers to reconnect without advertising.
+    for node_id, record in trusted.items():
+        if len(nodes) >= MAX_NODES or any(node.get('node_id') == node_id for node in nodes):
+            continue
+        try:
+            saved = validate_node_description(record.get('description'))
+            if saved['node_id'] == node_id:
+                nodes.append(saved)
+        except NodeLinkError:
+            continue
+    _atomic_private_json(CANDIDATES_FILE, nodes)
     reconnected = -1
     for index, node in enumerate(nodes):
         record = trusted.get(str(node["node_id"]))
@@ -305,13 +315,17 @@ def discover(discovery=discover_nodes) -> int:
                 "description": node, "token": client.token,
                 "expires_at": result.get("expires_at"), "trusted": True,
             })
+            record['description'] = node
+            _atomic_private_json(TRUSTED_FILE, trusted)
             reconnected = index
             break
         except NodeLinkError:
             continue
     print("GUIDE-NODES-1")
     for index, node in enumerate(nodes):
-        print(f"NODE={index}\t{_safe_text(node['name'])}")
+        address = urllib.parse.urlsplit(str(node.get("address", ""))).hostname or "local"
+        identity = str(node.get("node_id", ""))[:8]
+        print(f"NODE={index}\t{_safe_text(node['name'])}\t{_safe_text(identity, 8)}\t{_safe_text(address, 48)}")
     if reconnected >= 0:
         print(f"TRUSTED={reconnected}")
     return 0
@@ -332,10 +346,8 @@ def pair(index_text: str, code: str) -> int:
         "expires_at": result.get("expires_at"),
     }
     _atomic_private_json(SESSION_FILE, session)
-    android = client.android_status()
     print("GUIDE-NODE-PAIRED-1")
     print("NAME=" + _safe_text(description["name"]))
-    print("ANDROID=" + _safe_text(android.get("state", "unknown")).upper())
     return 0
 
 
@@ -349,7 +361,8 @@ def trust() -> int:
         raise NodeLinkError("NODE DID NOT COMPLETE TRUST")
     node_id = str(client.description["node_id"])
     trusted = _trusted_nodes()
-    trusted[node_id] = {"name": str(client.description["name"])[:64], "secret": secret}
+    trusted[node_id] = {"name": str(client.description["name"])[:64], "secret": secret,
+                        "description": client.description}
     _atomic_private_json(TRUSTED_FILE, trusted)
     print("GUIDE-NODE-TRUSTED-1")
     print("NAME=" + _safe_text(client.description["name"]))
@@ -1096,6 +1109,10 @@ def main(arguments: list[str] | None = None) -> int:
             return discover()
         if len(args) == 3 and args[0] == "pair":
             return pair(args[1], args[2])
+        if args == ["pair-input"]:
+            values=sys.stdin.read(64).strip().split()
+            if len(values)!=2: raise NodeLinkError("PAIRING DETAILS ARE INVALID")
+            return pair(values[0],values[1])
         if args == ["status"]:
             return status()
         if args == ["media"]:

@@ -1,0 +1,159 @@
+From 045d067ec2f05602e601b0d2cae0271e91d4d14d Mon Sep 17 00:00:00 2001
+From: GuideOS Project <guideos@localhost>
+Date: Thu, 10 Sep 2026 23:45:00 -0400
+Subject: [PATCH] libnsfb: repeat held controls and map d-pad
+
+Keep moving the browser pointer while an analogue axis remains displaced, and
+translate SDL keyboard arrow events from the RG35XX H d-pad into pointer
+movement. This makes both controller paths consistent and usable without a
+legacy mouse device.
+
+---
+ libnsfb/src/surface/sdl.c | 87 +++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 75 insertions(+), 12 deletions(-)
+
+diff --git a/libnsfb/src/surface/sdl.c b/libnsfb/src/surface/sdl.c
+index 4919dca..bf64a34 100644
+--- a/libnsfb/src/surface/sdl.c
++++ b/libnsfb/src/surface/sdl.c
+@@ -350,5 +350,9 @@ static SDL_Joystick *sdl_joystick;
+ static int sdl_joystick_x;
+ static int sdl_joystick_y;
++static Sint16 sdl_joystick_axis_x;
++static Sint16 sdl_joystick_axis_y;
++static SDL_TimerID sdl_joystick_timer_id;
++static uint32_t sdl_joystick_timer(uint32_t interval, void *param);
+ 
+ static void
+ set_palette(nsfb_t *nsfb)
+@@ -497,10 +501,15 @@ static int sdl_initialise(nsfb_t *nsfb)
+     sdl_joystick_x = nsfb->width / 2;
+     sdl_joystick_y = nsfb->height / 2;
+     sdl_joystick = NULL;
++    sdl_joystick_axis_x = 0;
++    sdl_joystick_axis_y = 0;
++    sdl_joystick_timer_id = 0;
+     if (SDL_NumJoysticks() > 0) {
+         sdl_joystick = SDL_JoystickOpen(0);
+-        if (sdl_joystick != NULL)
++        if (sdl_joystick != NULL) {
+             SDL_JoystickEventState(SDL_ENABLE);
++            sdl_joystick_timer_id = SDL_AddTimer(30, sdl_joystick_timer, NULL);
++        }
+     }
+ 
+     return 0;
+@@ -510,5 +519,9 @@ static int sdl_finalise(nsfb_t *nsfb)
+ {
+     nsfb=nsfb;
++    if (sdl_joystick_timer_id != 0) {
++        SDL_RemoveTimer(sdl_joystick_timer_id);
++        sdl_joystick_timer_id = 0;
++    }
+     if (sdl_joystick != NULL) {
+         SDL_JoystickClose(sdl_joystick);
+         sdl_joystick = NULL;
+@@ -536,6 +549,23 @@ static uint32_t wakeeventtimer(uint32_t ival, void *param)
+     return 0;
+ }
+ 
++static uint32_t sdl_joystick_timer(uint32_t interval, void *param)
++{
++    SDL_Event event;
++    param = param;
++
++    if (sdl_joystick_axis_x == 0 && sdl_joystick_axis_y == 0)
++        return interval;
++
++    event.type = SDL_USEREVENT;
++    event.user.code = 1;
++    event.user.data1 = 0;
++    event.user.data2 = 0;
++    SDL_PushEvent(&event);
++
++    return interval;
++}
++
+ static enum nsfb_key_code_e sdl_joystick_button(unsigned button)
+ {
+     switch (button) {
+@@ -607,13 +637,30 @@ static bool sdl_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
+ 
+     switch (sdlevent.type) {
+     case SDL_KEYDOWN:
+-	event->type = NSFB_EVENT_KEY_DOWN;
+-	event->value.keycode = sdl_nsfb_map[sdlevent.key.keysym.sym];
++        switch (sdlevent.key.keysym.sym) {
++        case SDLK_UP: sdl_joystick_move(nsfb, event, 0, -24); break;
++        case SDLK_DOWN: sdl_joystick_move(nsfb, event, 0, 24); break;
++        case SDLK_LEFT: sdl_joystick_move(nsfb, event, -24, 0); break;
++        case SDLK_RIGHT: sdl_joystick_move(nsfb, event, 24, 0); break;
++        default:
++            event->type = NSFB_EVENT_KEY_DOWN;
++            event->value.keycode = sdl_nsfb_map[sdlevent.key.keysym.sym];
++            break;
++        }
+ 	break;
+ 
+     case SDL_KEYUP:
+-	event->type = NSFB_EVENT_KEY_UP;
+-	event->value.keycode = sdl_nsfb_map[sdlevent.key.keysym.sym];
++        switch (sdlevent.key.keysym.sym) {
++        case SDLK_UP:
++        case SDLK_DOWN:
++        case SDLK_LEFT:
++        case SDLK_RIGHT:
++            break;
++        default:
++            event->type = NSFB_EVENT_KEY_UP;
++            event->value.keycode = sdl_nsfb_map[sdlevent.key.keysym.sym];
++            break;
++        }
+ 	break;
+ 
+     case SDL_MOUSEBUTTONDOWN:
+@@ -681,10 +728,20 @@ static bool sdl_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
+     case SDL_JOYAXISMOTION:
+-        if (sdlevent.jaxis.axis == 0) {
++        /* The RG35XX H legacy js interface flattens ABS_HAT0X/Y into
++         * axes 4/5 instead of producing SDL_JOYHATMOTION. */
++        if (sdlevent.jaxis.axis == 0 || sdlevent.jaxis.axis == 4) {
+-            int amount = sdlevent.jaxis.value / 4096;
++            int amount;
++            sdl_joystick_axis_x = sdlevent.jaxis.value;
++            if (sdl_joystick_axis_x > -8000 && sdl_joystick_axis_x < 8000)
++                sdl_joystick_axis_x = 0;
++            amount = sdl_joystick_axis_x / 4096;
+             if (amount != 0)
+                 sdl_joystick_move(nsfb, event, amount, 0);
+-        } else if (sdlevent.jaxis.axis == 1) {
++        } else if (sdlevent.jaxis.axis == 1 || sdlevent.jaxis.axis == 5) {
+-            int amount = sdlevent.jaxis.value / 4096;
++            int amount;
++            sdl_joystick_axis_y = sdlevent.jaxis.value;
++            if (sdl_joystick_axis_y > -8000 && sdl_joystick_axis_y < 8000)
++                sdl_joystick_axis_y = 0;
++            amount = sdl_joystick_axis_y / 4096;
+             if (amount != 0)
+                 sdl_joystick_move(nsfb, event, 0, amount);
+         }
+@@ -744,8 +801,15 @@ static bool sdl_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
+ 	break;
+ 
+     case SDL_USEREVENT:
+-	event->type = NSFB_EVENT_CONTROL;
+-	event->value.controlcode = NSFB_CONTROL_TIMEOUT;
++        if (sdlevent.user.code == 1) {
++            int x = sdl_joystick_axis_x / 4096;
++            int y = sdl_joystick_axis_y / 4096;
++            if (x != 0 || y != 0)
++                sdl_joystick_move(nsfb, event, x, y);
++        } else {
++            event->type = NSFB_EVENT_CONTROL;
++            event->value.controlcode = NSFB_CONTROL_TIMEOUT;
++        }
+ 	break;
+ 
+     case SDL_VIDEORESIZE:
+-- 
+2.43.0

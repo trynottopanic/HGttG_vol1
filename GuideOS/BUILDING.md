@@ -1,6 +1,11 @@
 # Preparing a GuideOS build workspace
 
-GuideOS is assembled on Linux with Buildroot. On Windows, the current reference
+These are retained Buildroot workshop instructions. New foundation work uses
+minimal Debian; see [Modern foundation 0](MODERN_FOUNDATION_0.md),
+[Debian bring-up](DEBIAN_BRINGUP_0.md) and the individual diagnostic build records.
+
+The earlier GuideOS implementation is assembled on Linux with Buildroot.
+On Windows, the reference
 workshop is Ubuntu under WSL2. WSL2 lets Linux build tools run alongside
 Windows; it is not installed on the Deck.
 

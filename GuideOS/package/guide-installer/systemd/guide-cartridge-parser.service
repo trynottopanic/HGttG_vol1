@@ -1,0 +1,31 @@
+[Unit]
+# Each owner request is a fresh bounded process; no automatic restart.
+StartLimitIntervalSec=0
+Description=Guide unprivileged cartridge parser
+Requires=guide-cartridge-parser.socket
+[Service]
+Type=simple
+User=guide-archive
+Group=guide-archive
+ExecStart=/usr/bin/python3 -I /usr/lib/guideos/installer/guide_install_worker.py
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/guideos/installer/staging
+RestrictAddressFamilies=AF_UNIX
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+Nice=10
+IOSchedulingClass=idle
+MemoryHigh=64M
+MemoryMax=96M
+TasksMax=1
+LimitNOFILE=32
+LimitCPU=8
+RuntimeMaxSec=15
+TimeoutStopSec=1
+Restart=no

@@ -1,0 +1,13 @@
+[Unit]
+Description=Guide Supervisor private lifecycle socket
+
+[Socket]
+ListenSequentialPacket=/run/guideos/supervisor/control.sock
+SocketMode=0660
+SocketUser=root
+SocketGroup=guide-broker
+DirectoryMode=0750
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target

@@ -13,18 +13,23 @@ from ctypes import wintypes
 import os
 from pathlib import Path
 import statistics
+import sys
 import threading
 import time
 
 from guide_node_core import DEFAULT_DISCOVERY_PORT, DEFAULT_HTTP_PORT, NodeState
 from guide_node_server import NodeRuntime
 from windows_ui_performance import MovementGovernor
+from diagnostic_suite import DiagnosticSuiteRunner
+from deck_discovery import discover_decks
 
 
 if not hasattr(ctypes, "WINFUNCTYPE"):
     raise RuntimeError("The native Node interface requires Windows")
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
+user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+user32.GetWindowTextW.restype = ctypes.c_int
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
 
@@ -132,6 +137,10 @@ ID_TRUST_ARM = 401
 ID_TRUST_LIST = 402
 ID_TRUST_REVOKE = 403
 ID_DIAGNOSE_MOVEMENT = 501
+ID_SE_TOGGLE = 502
+ID_AT_FIELD = 503
+ID_DECK_DIAGNOSTIC = 504
+ID_DECK_DIAGNOSTIC_CANCEL = 505
 DIAGNOSTIC_TIMER = 1
 MOVE_WATCHDOG_TIMER = 2
 PM_REMOVE = 0x0001
@@ -252,8 +261,11 @@ def _window_procedure(hwnd: int, message: int, wparam: int, lparam: int) -> int:
 
 
 class NativeGuideNodeWindow:
-    def __init__(self, http_port: int, discovery_port: int, media_folder: str = "") -> None:
-        self.state = NodeState(auto_prepare=True)
+    def __init__(self, http_port: int, discovery_port: int, media_folder: str = "",
+                 semiotic_enabled: bool | None = None, config_path: Path | None = None,
+                 deck_address: str = "") -> None:
+        self.state = NodeState(auto_prepare=True, semiotic_enabled=semiotic_enabled,
+                               config_path=config_path)
         if media_folder:
             self.state.media.set_folder(media_folder)
             self.state.prepare_media()
@@ -272,6 +284,11 @@ class NativeGuideNodeWindow:
             -max(12, round(10 * self.dpi / 72)), 0, 0, 0, 400, 0, 0, 0,
             1, 0, 0, 5, 0, "Segoe UI")
         self._displayed: dict[str, object] = {}
+        self.deck_address = deck_address.strip()
+        self._deck_runner = None
+        self._deck_diag_status = "No Deck diagnostic running."
+        self._deck_diag_lock = threading.Lock()
+        self._deck_scan_thread = None
         self._diagnostic_active = False
         self._diagnostic_dragging = False
         self._diagnostic_timer_times: list[float] = []
@@ -324,7 +341,17 @@ class NativeGuideNodeWindow:
         return handle
 
     def _create_controls(self) -> None:
-        self._control("STATIC", "GUIDE DESKTOP NODE", 24, 20, 630, 28)
+        self._control("STATIC", "GUIDE DESKTOP NODE", 24, 20, 330, 28)
+        self._control("STATIC", "AT Field", 365, 24, 75, 24)
+        self.controls["at_field"] = self._control(
+            "COMBOBOX", "", 445, 20, 180, 140, ID_AT_FIELD, 0x0003 | WS_VSCROLL | 0x10000)
+        for mode in ("closed", "familiar", "open"):
+            # Keep the UTF-16 buffer alive until synchronous CB_ADDSTRING returns.
+            label = ctypes.c_wchar_p(mode.title())
+            user32.SendMessageW(self.controls["at_field"], 0x0143, 0,
+                                ctypes.cast(label, ctypes.c_void_p).value)
+        user32.SendMessageW(self.controls["at_field"], 0x014E,
+                            ("closed", "familiar", "open").index(self.state.at_field.mode.value), 0)
         self._control("STATIC", "Makes selected services on this computer available to a paired Deck.",
                       24, 51, 630, 22)
         self.controls["status"] = self._control("STATIC", "Starting...", 24, 82, 620, 22)
@@ -363,10 +390,23 @@ class NativeGuideNodeWindow:
         self.controls["trusted"] = self._control(
             "LISTBOX", "", 24, 574, 475, 60, ID_TRUST_LIST, WS_BORDER | WS_VSCROLL | LBS_NOTIFY)
         self._control("BUTTON", "Revoke selected", 510, 574, 120, 30, ID_TRUST_REVOKE)
+
+        self._control("STATIC", "SEMIOTIC ENGINE", 24, 646, 220, 20)
+        self.controls["semiotic_toggle"] = self._control(
+            "BUTTON", "Allow this Node to use the separately installed Engine",
+            24, 668, 430, 24, ID_SE_TOGGLE, BS_AUTOCHECKBOX)
+        self.controls["semiotic_status"] = self._control(
+            "STATIC", "Checking optional Engine...", 24, 696, 606, 24)
         self._control("STATIC", "DEVELOPMENT LINK — trusted private networks only.",
-                      24, 660, 380, 24)
-        self._control("BUTTON", "Diagnose movement", 475, 650, 155, 30,
+                      24, 822, 606, 24)
+        self._control("BUTTON", "Diagnose movement", 475, 736, 155, 30,
                       ID_DIAGNOSE_MOVEMENT)
+        self._control("STATIC", "DECK DIAGNOSTICS", 24, 716, 180, 20)
+        self._control("STATIC", "Deck IP", 24, 742, 64, 22)
+        self.controls["deck_address"] = self._control("EDIT", self.deck_address, 90, 738, 145, 28, 0, WS_BORDER | 0x0080)
+        self.controls["deck_diag"] = self._control("BUTTON", "Run diagnostics", 245, 738, 125, 28, ID_DECK_DIAGNOSTIC)
+        self.controls["deck_cancel"] = self._control("BUTTON", "Cancel", 378, 738, 80, 28, ID_DECK_DIAGNOSTIC_CANCEL)
+        self.controls["deck_diag_status"] = self._control("STATIC", self._deck_diag_status, 24, 770, 606, 46)
 
     @staticmethod
     def _set_text(handle: int, value: str) -> None:
@@ -412,6 +452,8 @@ class NativeGuideNodeWindow:
                 (str(item["client_name"]), str(item["application"]))
                 for item in self.state.applications.pending()),
             "streaming_ready": self.state.applications.streaming_available,
+            "semiotic": self.state.semiotic.status(),
+            "semiotic_enabled": self.state.semiotic.enabled,
         }
 
     def _refresh_worker(self) -> None:
@@ -434,6 +476,13 @@ class NativeGuideNodeWindow:
             return
         running = bool(snapshot["running"])
         self._set_named_text("status", "Ready for a Deck" if running else "Stopped")
+        with self._deck_diag_lock:
+            deck_diag_status = self._deck_diag_status
+        self._set_named_text("deck_diag_status", deck_diag_status)
+        if self.deck_address and self._deck_scan_thread is None:
+            field=ctypes.create_unicode_buffer(256)
+            user32.GetWindowTextW(self.controls["deck_address"],field,len(field))
+            if not field.value:self._set_named_text("deck_address",self.deck_address)
         count = int(snapshot["sessions"])
         suffix = "Deck" if count == 1 else "Decks"
         address = (f"{self.runtime.address}:{self.runtime.http_port}  —  {count} {suffix} paired"
@@ -460,6 +509,20 @@ class NativeGuideNodeWindow:
             if snapshot["media_error"]:
                 media += f" Scan problem: {snapshot['media_error']}"
         self._set_named_text("media", media)
+
+        semiotic = dict(snapshot["semiotic"])
+        enabled = bool(snapshot["semiotic_enabled"])
+        if self._displayed.get("semiotic_enabled") != enabled:
+            user32.SendMessageW(self.controls["semiotic_toggle"], BM_SETCHECK,
+                                BST_CHECKED if enabled else 0, 0)
+            self._displayed["semiotic_enabled"] = enabled
+        if not enabled:
+            engine_text = "Optional Engine access is off. Deck requests cannot use it."
+        elif semiotic.get("available"):
+            engine_text = "Engine ready — bounded text assistance is available to paired Decks."
+        else:
+            engine_text = "Engine allowed, but not running. Start the Semiotic Engine control panel."
+        self._set_named_text("semiotic_status", engine_text)
 
         applications = tuple(snapshot["applications"])
         application_entries = tuple(
@@ -551,6 +614,71 @@ class NativeGuideNodeWindow:
         destination = base / "movement-diagnostic.txt"
         destination.write_text(report, encoding="utf-8")
         return destination
+
+    def _start_deck_discovery(self) -> None:
+        if self.deck_address or self._deck_scan_thread is not None:
+            return
+        with self._deck_diag_lock:
+            self._deck_diag_status = "Scanning local network for Deck…"
+        def scan() -> None:
+            try:
+                found = discover_decks()
+                with self._deck_diag_lock:
+                    if len(found)==1:
+                        self.deck_address = found[0]
+                        self._deck_diag_status = f"Deck found at {found[0]} — press Run diagnostics"
+                    elif found:self._deck_diag_status = "Several endpoints found. Enter the Deck IP before running diagnostics."
+                    else:self._deck_diag_status = "No Deck found. Enter its Wi-Fi IP, then press Run diagnostics."
+            except Exception:
+                with self._deck_diag_lock:self._deck_diag_status = "Discovery failed. Enter the Deck IP to continue."
+            finally:
+                self._deck_scan_thread = None
+                user32.PostMessageW(self.hwnd, WM_APP_STATUS, 0, 0)
+        self._deck_scan_thread = threading.Thread(target=scan, name="guide-node-deck-discovery", daemon=True)
+        self._deck_scan_thread.start()
+
+    def _start_deck_diagnostics(self) -> None:
+        if self._deck_runner is not None:
+            self._message("Diagnostics are already running. Use Cancel to stop them.")
+            return
+        address=ctypes.create_unicode_buffer(256)
+        user32.GetWindowTextW(self.controls["deck_address"],address,len(address))
+        selected=address.value.strip() or self.deck_address
+        if not selected:
+            self._start_deck_discovery()
+            self._message("Enter the Deck's Wi-Fi IP, or wait for discovery and press Run diagnostics again.")
+            return
+        candidates=[Path(__file__).resolve().parents[2]]
+        if getattr(sys,'frozen',False):
+            candidates.extend([parent / 'HGttG_vol1/GuideOS' for parent in Path(sys.executable).resolve().parents])
+        candidates.append(Path('E:/DGttG/HGttG_vol1/GuideOS'))
+        script=next((root/'build/Guide-Link.ps1' for root in candidates if (root/'build/Guide-Link.ps1').is_file()),None)
+        if script is None:
+            self._message("Guide-Link.ps1 was not found. Install the GuideOS development helpers on this paired PC.",True)
+            return
+        self.deck_address=selected
+        self._deck_runner = DiagnosticSuiteRunner(script, selected)
+        runner = self._deck_runner
+        with self._deck_diag_lock:
+            self._deck_diag_status = "Diagnostics running"
+        def work() -> None:
+            def update(result) -> None:
+                with self._deck_diag_lock:
+                    self._deck_diag_status = f"{result.command_id}: {result.outcome}"
+                user32.PostMessageW(self.hwnd, WM_APP_STATUS, 0, 0)
+            try:
+                results = runner.run(update)
+                passed = sum(r.outcome == "passed" for r in results)
+                capture = next((r for r in results if r.action == "Capture" and r.outcome == "passed"), None)
+                failed=next((r for r in results if r.outcome!='passed'),None)
+                with self._deck_diag_lock:
+                    self._deck_diag_status = (capture.detail or "Full capture saved.") if capture else (f"{failed.action}: {failed.outcome}. {failed.detail[:220]}" if failed else f"Diagnostics finished: {passed}/{len(results)} passed")
+            except Exception as error:
+                with self._deck_diag_lock:self._deck_diag_status = "Diagnostics failed: " + str(error)[:240]
+            finally:
+                self._deck_runner = None
+                user32.PostMessageW(self.hwnd, WM_APP_STATUS, 0, 0)
+        threading.Thread(target=work, name="guide-node-deck-diagnostics", daemon=True).start()
 
     def _start_movement_diagnostic(self) -> None:
         self._diagnostic_active = True
@@ -811,7 +939,20 @@ class NativeGuideNodeWindow:
 
     def _command(self, control_id: int) -> None:
         try:
-            if control_id == ID_NEW_CODE:
+            if control_id == ID_AT_FIELD:
+                modes = ("closed", "familiar", "open")
+                selection = user32.SendMessageW(self.controls["at_field"], 0x0147, 0, 0)
+                if 0 <= selection < len(modes):
+                    try:
+                        mode = modes[selection]
+                        if mode != self.state.at_field.mode.value:
+                            preview = self.state.preview_at_field(mode) + "\n\nApply this setting?"
+                            if user32.MessageBoxW(self.hwnd, preview, "AT Field", 0x0004 | 0x0020) == 6:
+                                self.state.set_at_field(mode)
+                    finally:
+                        user32.SendMessageW(self.controls["at_field"], 0x014E,
+                                            modes.index(self.state.at_field.mode.value), 0)
+            elif control_id == ID_NEW_CODE:
                 self.state.rotate_pairing_code()
             elif control_id == ID_NODE_TOGGLE:
                 if self.runtime.running:
@@ -860,8 +1001,17 @@ class NativeGuideNodeWindow:
                 trusted = self.state.trusted_decks()
                 if index >= 0 and index < len(trusted):
                     self.state.revoke_trust(trusted[index][0])
+            elif control_id == ID_SE_TOGGLE:
+                checked = user32.SendMessageW(
+                    self.controls["semiotic_toggle"], BM_GETCHECK, 0, 0)
+                self.state.set_semiotic_enabled(checked == BST_CHECKED)
             elif control_id == ID_DIAGNOSE_MOVEMENT:
                 self._start_movement_diagnostic()
+            elif control_id == ID_DECK_DIAGNOSTIC:
+                self._start_deck_diagnostics()
+            elif control_id == ID_DECK_DIAGNOSTIC_CANCEL:
+                if self._deck_runner:
+                    self._deck_runner.cancel()
             with self._snapshot_lock:
                 self._snapshot = self._status_snapshot()
             self._apply_snapshot()
@@ -917,7 +1067,10 @@ class NativeGuideNodeWindow:
             self._paint_movement_placeholder()
             return 0
         if message == WM_COMMAND:
-            self._command(int(wparam) & 0xFFFF)
+            control_id = int(wparam) & 0xFFFF
+            # Combo boxes emit several notifications; act only on selection change.
+            if control_id != ID_AT_FIELD or (int(wparam) >> 16) & 0xFFFF == 1:
+                self._command(control_id)
             return 0
         if message == WM_CLOSE:
             user32.DestroyWindow(hwnd)
@@ -946,7 +1099,7 @@ class NativeGuideNodeWindow:
         hwnd = user32.CreateWindowExW(
             0, class_name, f"Guide Desktop Node — diagnostic build ({self.dpi} DPI)",
             WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-            self._px(700), self._px(740), None, None, instance, None,
+            self._px(700), self._px(880), None, None, instance, None,
         )
         if not hwnd:
             raise ctypes.WinError(ctypes.get_last_error())
@@ -958,6 +1111,7 @@ class NativeGuideNodeWindow:
         self._worker = threading.Thread(
             target=self._refresh_worker, name="guide-node-native-status", daemon=True)
         self._worker.start()
+        self._start_deck_discovery()
         user32.ShowWindow(hwnd, SW_SHOW)
         user32.UpdateWindow(hwnd)
         message = MSG()
@@ -972,9 +1126,15 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=DEFAULT_HTTP_PORT)
     parser.add_argument("--discovery-port", type=int, default=DEFAULT_DISCOVERY_PORT)
     parser.add_argument("--media-folder", default="")
+    parser.add_argument("--config", type=Path, default=None,
+                        help="Use a separate settings file, for isolated testing or another Node profile")
+    parser.add_argument("--deck-address", default="", help="Single Deck IPv4 address for diagnostics")
+    parser.add_argument("--semiotic-engine", action="store_true", default=None,
+                        help="Explicitly offer the separately installed local Semiotic Engine")
     arguments = parser.parse_args()
     NativeGuideNodeWindow(arguments.port, arguments.discovery_port,
-                          arguments.media_folder).run()
+                          arguments.media_folder, arguments.semiotic_engine,
+                          arguments.config, arguments.deck_address).run()
 
 
 if __name__ == "__main__":

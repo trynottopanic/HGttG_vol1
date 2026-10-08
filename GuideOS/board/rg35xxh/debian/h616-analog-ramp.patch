@@ -1,0 +1,67 @@
+--- a/sound/soc/sunxi/sun4i-codec.c
++++ b/sound/soc/sunxi/sun4i-codec.c
+@@ -1921,6 +1921,44 @@
+ 			      sun50i_h616_codec_lineout_src_enum),
+ };
+ 
++/* The digital ramp does not initialize the analog output path. */
++static int sun50i_h616_codec_analog_init(struct snd_soc_component *component)
++{
++	unsigned int mask = BIT(SUN50I_H616_LMUTE) |
++			    BIT(SUN50I_H616_RMUTE) |
++			    BIT(SUN50I_H616_RSWITCH) |
++			    BIT(SUN50I_H616_RAMPEN);
++	unsigned int value = BIT(SUN50I_H616_LMUTE) |
++			     BIT(SUN50I_H616_RMUTE) |
++			     BIT(SUN50I_H616_RAMPEN);
++	int ret;
++
++	/* Unmute both mixers and use the enabled analog ramp reference. */
++	ret = snd_soc_component_update_bits(component,
++			SUN50I_H616_DAC_AC_DAC_REG, mask, value);
++	if (ret < 0)
++		return ret;
++
++	/* Vendor ramp setup: 6 us step; leave digital enable to DAPM. */
++	ret = snd_soc_component_update_bits(component,
++			SUN50I_H616_DAC_AC_RAMP_REG,
++			GENMASK(6, 4), BIT(SUN50I_H616_RAMP_STEP));
++	return ret < 0 ? ret : 0;
++}
++
++static int sun50i_h616_codec_ramp_event(struct snd_soc_dapm_widget *w,
++				      struct snd_kcontrol *kcontrol, int event)
++{
++	struct snd_soc_component *component = snd_soc_dapm_to_component(w->dapm);
++
++	if (event == SND_SOC_DAPM_PRE_PMU)
++		return sun50i_h616_codec_analog_init(component);
++
++	/* Settle after either digital ramp edge, before the next DAPM stage. */
++	msleep(25);
++	return 0;
++}
++
+ static const struct snd_soc_dapm_widget sun50i_h616_codec_codec_widgets[] = {
+ 	/* Digital parts of the DACs */
+ 	SND_SOC_DAPM_SUPPLY("DAC Enable", SUN4I_CODEC_DAC_DPC,
+@@ -1946,13 +1984,17 @@
+ 	/* Line Out path */
+ 	SND_SOC_DAPM_MUX("Line Out Source Playback Route",
+ 			 SND_SOC_NOPM, 0, 0, sun50i_h616_codec_lineout_src),
+-	SND_SOC_DAPM_OUT_DRV("Line Out Ramp Controller",
++	SND_SOC_DAPM_OUT_DRV_E("Line Out Ramp Controller",
+ 			     SUN50I_H616_DAC_AC_RAMP_REG,
+-			     SUN50I_H616_RDEN, 0, NULL, 0),
++			     SUN50I_H616_RDEN, 0, NULL, 0,
++			     sun50i_h616_codec_ramp_event,
++			     SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
++			     SND_SOC_DAPM_POST_PMD),
+ 	SND_SOC_DAPM_OUTPUT("LINEOUT"),
+ };
+ 
+ static const struct snd_soc_component_driver sun50i_h616_codec_codec = {
++	.probe = sun50i_h616_codec_analog_init,
+ 	.controls   = sun50i_h616_codec_codec_controls,
+ 	.num_controls   = ARRAY_SIZE(sun50i_h616_codec_codec_controls),
+ 	.dapm_widgets   = sun50i_h616_codec_codec_widgets,

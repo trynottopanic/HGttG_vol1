@@ -20,5 +20,13 @@ int guide_wikipedia_install_supported(const struct guide_cartridge *item);
 int guide_wikipedia_install(const struct guide_cartridge *item, FILE *log,
                             char *message, size_t message_size);
 int guide_wikipedia_installed(void);
+int guide_semiotic_install_supported(const struct guide_cartridge *item);
+int guide_semiotic_install(const struct guide_cartridge *item, FILE *log,
+                           char *message, size_t message_size);
+int guide_semiotic_installed(void);
+int guide_emulation_install_supported(const struct guide_cartridge *item);
+int guide_emulation_install(const struct guide_cartridge *item, FILE *log,
+                            char *message, size_t message_size);
+int guide_emulation_installed(void);
 
 #endif

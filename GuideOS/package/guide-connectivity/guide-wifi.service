@@ -1,0 +1,25 @@
+[Unit]
+Description=Guide Wi-Fi connection and reconnection policy
+After=NetworkManager.service local-fs.target
+Wants=NetworkManager.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/lib/guideos/connectivity/guide_wifi_service.py
+Environment=PYTHONDONTWRITEBYTECODE=1
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=5
+RuntimeDirectory=guideos-wifi
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+StateDirectory=guideos-wifi
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+--- a/sound/soc/sunxi/sun4i-codec.c
++++ b/sound/soc/sunxi/sun4i-codec.c
+@@ -454,14 +454,20 @@
+ 	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
+ 	struct sun4i_codec *scodec = snd_soc_card_get_drvdata(rtd->card);
+ 	u32 val;
++	u32 trigger_mask = 0x3f;
+ 
+ 	/* Flush the TX FIFO */
+ 	regmap_field_set_bits(scodec->reg_dac_fifoc,
+ 			      BIT(SUN4I_CODEC_DAC_FIFOC_FIFO_FLUSH));
+ 
++	/* H616 has a seven-bit threshold; bit 14 is set after reset. */
++	if (of_device_is_compatible(scodec->dev->of_node,
++				    "allwinner,sun50i-h616-codec"))
++		trigger_mask = 0x7f;
++
+ 	/* Set TX FIFO Empty Trigger Level */
+ 	regmap_field_update_bits(scodec->reg_dac_fifoc,
+-				 0x3f << SUN4I_CODEC_DAC_FIFOC_TX_TRIG_LEVEL,
++				 trigger_mask << SUN4I_CODEC_DAC_FIFOC_TX_TRIG_LEVEL,
+ 				 0xf << SUN4I_CODEC_DAC_FIFOC_TX_TRIG_LEVEL);
+ 
+ 	if (substream->runtime->rate > 32000)

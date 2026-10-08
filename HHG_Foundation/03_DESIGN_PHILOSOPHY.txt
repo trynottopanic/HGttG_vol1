@@ -1,7 +1,22 @@
 THE THIRD WAY: DESIGN PHILOSOPHY
 ================================
 
-Status: Foundational summary, version 0.4
+Status: Foundational summary, version 0.7
+Revision: 22 September 2026; clarified scope of social and engineering guidance.
+
+SCOPE OF THESE PRINCIPLES
+
+Some early principles concerning individual choice, separation and total safety
+were developed for a social digital place, or "cyberspace". They guide the wider
+project but do not translate wholesale into requirements for every GuideOS
+component. Anonymity, absolute isolation and unrestricted use are not universal
+engineering mandates. Acceptable risk exists in intercommunication.
+
+GuideOS should remain security-conscious while choosing practical protections
+for the actual data, access and environment involved. Consider usefulness,
+performance, complexity and exposure together. Philosophical guidance informs
+these choices; explicit product requirements and concrete consequences determine
+the implementation. Do not infer a demand for zero risk from these principles.
 
 BEYOND THE FALSE CHOICE
 
@@ -65,6 +80,58 @@ understand more should be able to inspect sources, actions, permissions,
 provenance, network behavior, and technical details. Simplicity must not depend
 on secrecy.
 
+CONTROL WITHOUT CLUTTER
+
+The system should give people practical control wherever that control matters,
+without turning ordinary use into a wall of settings or requiring every design
+choice to expose every implementation detail. Comprehensive options, attention
+to uncommon and fringe use cases, and easy interoperability are better ways to
+preserve control than indiscriminately placing every mechanism in front of the
+person. Defaults and guided paths are legitimate when they remain reversible,
+explainable, and do not conceal a material restriction on the person's data,
+devices, connections, or choices.
+
+VISUAL EXPRESSION WITHOUT OBSTRUCTION
+
+Visual design may be inventive, vivid, and recognizably human, but it must not
+compete with the work a person came to do. Favor clear, modern, legible text;
+use ornament, motion, and complexity only where they clarify state, structure,
+or purpose. Build color palettes from complementary relationships and deliberate
+contrast rather than forcing every surface into one uniform scheme. A coherent
+visual identity may use variation, accents, and changing contexts while retaining
+readable hierarchy, accessible contrast, and predictable controls. Screen space
+belongs first to information, tasks, status, and controls. Texture, decorative
+illustration, ornamental borders, and other visual flourish are justified only
+when they communicate useful state or preserve orientation; they must never
+crowd out functionality, reduce usable display area, or make the interface
+harder to scan.
+
+ARCHITECTURE AS FLOW
+
+The purpose of architecture is to provide the structure through which energy
+flows most usefully. In buildings, that includes people, light, heat, air,
+materials, and movement. In computer systems, it includes electrical power,
+processing time, data, network capacity, attention, intent, and the consequences
+of action. A good structure makes those flows legible, efficient, recoverable,
+and proportionate rather than trapping them behind needless friction or control.
+
+Technology should therefore be variable enough to meet different bodies,
+resources, purposes, and modes of creation while remaining usable without
+specialist training. The Guide should reduce the distance between a person's
+idea and a safe, understandable result: offering adaptable tools, clear paths,
+and compatible parts without requiring every person to become an administrator
+or engineer before they can make something.
+
+BUILD FOR THE NEXT CHANGE
+
+Design must move with enough speed to make useful things, but it must also look
+ahead far enough to avoid creating unnecessary interlocking systems. Before
+adding a new shared mechanism, prefer extending a clear existing contract or
+keeping the new work bounded and replaceable. Consider future uses, failure,
+interoperability, and maintenance cost early; do not attempt to pre-design every
+future feature. The aim is deliberate, understandable growth rather than either
+reckless accumulation or permanent planning.
+
 CREATION IS ORDINARY USE
 
 Making a small Guide program should be a normal creative activity, not a
@@ -115,6 +182,44 @@ Connectivity expands its reach but does not grant a remote service ownership of
 the person. Intermittent links and physically carried information are normal
 operating conditions.
 
+PERSONAL MACHINES, DELIBERATE EXCHANGE
+
+The accepted experiential model for GuideOS and its broader network draws from
+early personal-computer hobbyist communities: personally owned machines that
+are useful individually and become more useful through deliberate exchange.
+
+A Deck should be understandable as one's own computer. The person can inspect
+what it contains, what is installed, what resources are available, and how it
+is configured. Cartridges are understandable packages to obtain, examine,
+install, create, modify where supported, and exchange with other people.
+
+Nodes provide recognizable shared places and equipment: a library, a message
+board, a software collection, or a computer offering a particular service.
+Connections have visible purposes and identifiable counterparts, such as one's
+workstation, a friend's Deck, or a community library. A familiar display name
+does not by itself establish verified identity or permission.
+
+Different machines can participate through the functions they support. Sharing
+a document, message, or compatible cartridge should not require matching
+hardware or processing capacity. Useful local functions remain available when
+connections disappear; remote work reports its actual availability.
+
+Each owner controls their computing space and can offer bounded access to
+particular information or services. Discovery introduces an available connection;
+access still follows permission. Exchanging a cartridge transfers its packaged
+contents, not the sender's private state or grants. Connecting machines does
+not automatically pool their resources.
+
+The intended experience is:
+
+    I understand my machine, I can make things with it, and I can exchange
+    things with other people.
+
+This principle guides interface and network organization alongside the existing
+accessibility and security requirements. Exact protocols, resource allocation
+policies, and visual presentation remain separately specified implementation
+choices.
+
 HONESTNESS BEFORE SPEED
 
 Fast responses are desirable, but speed must not take precedence over informing
@@ -155,6 +260,28 @@ software, but money cannot purchase architectural privilege. Open specifications
 public tests, reciprocal licensing, transparent governance, portable data, and
 independent implementations must keep HHG centered on individuals and
 communities.
+
+METABOLIC, NET-FORWARD, ANTI-CORPORATE
+
+The Third Way should feel alive because the people using it can continually
+change it. Its interfaces and shared spaces should accumulate personal marks,
+community inventions, local identities, and visible paths between people
+rather than presenting one immaculate corporate surface. "Metabolic" means
+that the system grows, adapts, sheds obsolete parts, and renews itself through
+use without surrendering its stable ethical and technical contracts.
+
+The visual language should be net-forward: connection, movement, exchange,
+routes, and presence are treated as ordinary features of life rather than as
+hidden corporate infrastructure. The network should feel inhabitable and
+participatory, while still making boundaries, consent, provenance, and offline
+state unmistakable.
+
+Anti-corporate does not mean hostile to every business or professional visual
+tool. It means rejecting advertising hierarchy, compulsory branding,
+manufactured engagement, artificial scarcity, and the suggestion that a
+company owns the user's place in the network. The style should communicate
+energy, public expression, and creative resistance without turning rebellion
+into another opaque brand or allowing ornament to obscure function.
 
 GUIDING QUESTION
 
@@ -216,6 +343,15 @@ that Guide Recipes reproduce or contain Expression 2.
 
     https://github.com/wiremod/wire
 
+EARLY PERSONAL-COMPUTER HOBBYIST COMMUNITIES
+
+The owner adopted this experiential reference on 22 September 2026. Its
+contribution is the relationship among a personal machine, understandable
+software, experimentation, and deliberate exchange with peers and community
+services. GuideOS translates that model into accessible creation, portable
+cartridges, independently operated Nodes, and communication among unlike
+hardware through shared contracts.
+
 DISCORD'S SERVER METAPHOR
 
 Discord's familiar organization of people, roles, channels, and shared spaces
@@ -223,6 +359,48 @@ inspired one way of explaining community and workplace Nodes. The Third Way
 borrows the understandable social metaphor, not Discord's centralized service
 architecture: Third Way Nodes must remain independently hostable and mutually
 interoperable.
+
+METABOLIST ARCHITECTURE
+
+The Japanese Metabolist movement is an influence on how the Third Way thinks
+about durable structures and change. Its architectural ideas of long-lived
+frameworks, modular or replaceable parts, incremental growth, repair, and
+renewal inform a software preference for stable shared contracts around
+replaceable applications, providers, cartridges, interfaces, and hardware
+adapters.
+
+Its visual language is also an influence: modular assemblies, legible joints,
+layered infrastructure, adaptable silhouettes, visible routes, and a sense that
+parts can be joined, renewed, or repurposed over time. The Guide may translate
+those themes into original interface composition, hardware forms, and shared
+spaces when they improve comprehension or express change without obscuring use.
+
+This is not a mandate for monumental form, capsule imagery, or architecture
+that grows for its own sake. The applicable lesson is to let a person add,
+remove, repair, or replace a bounded part without forcing the entire system to
+be rebuilt or surrendering its legibility, compatibility, and ownership. Growth
+must remain proportionate to actual needs; modules must not become needless
+interdependence or a pretext for planned obsolescence.
+
+    https://www.moma.org/collection/terms/metabolist-architecture
+    https://sydney.jpf.go.jp/events/mutant-urbanism-in-japanese-architecture-lessons-from-the-metabolist-movement/
+
+JET SET RADIO FUTURE
+
+Smilebit and Sega's Jet Set Radio Future influenced the Third Way's metabolic,
+net-forward, anti-corporate visual and tonal direction. Its kinetic city,
+community of expressive individuals, pirate-broadcast sensibility, bold color,
+graphic rhythm, and resistance to the enclosure of public life suggest how a
+network interface can feel inhabited rather than administered from above.
+
+The Guide should translate that influence into original forms: visible routes
+and signals, user-made marks, energetic asymmetry, strong silhouettes, vivid
+accents, and a sense that technology belongs to the people moving through it.
+This is an influence on principles and atmosphere, not permission to reproduce
+the game's characters, logos, graffiti, music, typography, or other protected
+assets.
+
+    https://www.sega.com/
 
 This list should grow whenever a person, work, community, or system materially
 shapes the Third Way. Credit should identify the particular contribution

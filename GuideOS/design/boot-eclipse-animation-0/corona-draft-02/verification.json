@@ -1,0 +1,13 @@
+{
+  "size": [
+    640,
+    480
+  ],
+  "duration_ms": 7500,
+  "fps": 20,
+  "logical_frames": 150,
+  "palette_colors": 16,
+  "pixel_grid": "320x240 scaled 2x nearest-neighbor",
+  "final_hold_stable": true,
+  "scope": "isolated visual draft only; no boot, GPU, image or Seed changes"
+}

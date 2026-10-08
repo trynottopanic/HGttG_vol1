@@ -1,0 +1,24 @@
+[Unit]
+Description=Guide RG35XX H bounded Wi-Fi cold-boot probe recovery
+After=local-fs.target systemd-udevd.service systemd-journal-flush.service
+Before=NetworkManager.service guide-wifi.service bluetooth.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/lib/guideos/connectivity/guide_wifi_radio_recovery.py
+Environment=PYTHONDONTWRITEBYTECODE=1
+TimeoutStartSec=30
+RemainAfterExit=yes
+RuntimeDirectory=guideos-wifi-radio
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=-/sys/bus/sdio/drivers/rtw88_8821cs
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

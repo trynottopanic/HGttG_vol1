@@ -17,6 +17,7 @@
 #include <sys/mount.h>
 #include <sys/reboot.h>
 #include <sys/resource.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
@@ -25,6 +26,7 @@
 
 #include "cartridge.h"
 #include "installer.h"
+#include "guide_supervisor_protocol.h"
 #include "wifi.h"
 
 #define LOGO_WIDTH 256u
@@ -35,6 +37,8 @@
 #define ROSE_PATH "/usr/share/guideos/guide-rose-seal-250.rgba"
 #define MAX_INPUTS 16
 #define LAST_KNOWN_TIME "/var/lib/guideos/last-known-time"
+
+static int guide_supervisor_fd = -2;
 
 struct glyph { char letter; uint8_t rows[7]; };
 
@@ -197,6 +201,14 @@ enum screen {
     SCREEN_WIKIPEDIA_RESULTS,
     SCREEN_WIKIPEDIA_ARTICLE,
     SCREEN_WIKIPEDIA_LINKS,
+    SCREEN_WEB_KEYBOARD,
+    SCREEN_SE_HOME,
+    SCREEN_SE_CONSENT,
+    SCREEN_SE_WAIT,
+    SCREEN_SE_RESULT,
+    SCREEN_GAME_SYSTEMS,
+    SCREEN_GAME_LIST,
+    SCREEN_GAME_PLAYING,
     SCREEN_DOOM_LIST,
     SCREEN_DOOM_PLAYING,
     SCREEN_DISPLAY,
@@ -229,7 +241,16 @@ struct wifi_ui {
 #define GUIDE_AUDIO_ROUTE "/opt/guide/bluetooth/guide-audio-route"
 #define GUIDE_MEDIA_OWNER_FILE "/run/guideos-media-player.owner"
 #define GUIDE_DOOM_BINARY "/usr/bin/guide-doom"
+#define GUIDE_EMULATOR_BINARY "/usr/bin/guide-emulator"
+#define GUIDE_WIKIPEDIA_RICH "/usr/bin/guide-wikipedia-rich"
+#define GUIDE_WEB_BROWSER "/usr/bin/guide-web-browser"
+#define GUIDE_BUILD_ID "2026.09.21-EMU1"
+#define GUIDE_SE_BINARY "/usr/bin/guide-se-deck"
+#define GUIDE_SE_INPUT "/run/guideos-se-input.txt"
+#define GUIDE_SE_SUMMARY "/run/guideos-se-summary.txt"
+#define GUIDE_SE_TEXT_MAX 16384
 #define GUIDE_DOOM_MAX 32
+#define GUIDE_GAME_MAX 128
 
 static int guide_volume_percent = -1;
 static void bluetooth_start_async(FILE *log);
@@ -246,6 +267,35 @@ struct doom_ui {
     char message[96];
 };
 static struct doom_ui guide_doom;
+
+struct game_system { const char *id; const char *name; const char *folder; const char *extensions; };
+static const struct game_system guide_game_systems[] = {
+    {"gb", "Game Boy", "GB", ".gb"}, {"gbc", "Game Boy Color", "GBC", ".gbc,.gb"},
+    {"gba", "Game Boy Advance", "GBA", ".gba"},
+    {"genesis", "Genesis / Mega Drive", "GENESIS", ".md,.gen,.bin,.smd"},
+    {"snes", "SNES / Super Famicom", "SNES", ".sfc,.smc"},
+    {"nes", "NES / Famicom", "NES", ".nes,.fds,.unf,.unif"},
+    {"ps1", "PlayStation", "PS1", ".chd,.cue,.m3u,.pbp"}
+};
+struct game_ui {
+    struct doom_item items[GUIDE_GAME_MAX];
+    unsigned system_selected, count, selected;
+    pid_t pid;
+    char message[96];
+};
+static struct game_ui guide_games;
+
+struct semiotic_ui {
+    pid_t pid;
+    int output_fd;
+    char message[96];
+    char *summary;
+    size_t summary_length;
+    size_t page_offsets[512];
+    unsigned page;
+    unsigned known_pages;
+};
+static struct semiotic_ui guide_se = {.output_fd = -1};
 
 struct node_candidate {
     char name[65];
@@ -333,6 +383,15 @@ struct wikipedia_ui {
     struct wikipedia_link links[GUIDE_WIKI_LINK_MAX];
     unsigned link_count;
     unsigned selected_link;
+    char message[96];
+};
+
+#define GUIDE_WEB_TEXT_MAX 240
+struct web_ui {
+    unsigned keyboard_page;
+    unsigned cursor;
+    char text[GUIDE_WEB_TEXT_MAX + 1];
+    size_t text_length;
     char message[96];
 };
 
@@ -658,21 +717,34 @@ static void draw_header(struct framebuffer *fb, const char *title)
 
 static void draw_footer(struct framebuffer *fb, const char *left, const char *right)
 {
-    unsigned rw = text_width(right, 2);
+    unsigned scale = 2;
+    unsigned lw = text_width(left, scale), rw = text_width(right, scale);
+    if (lw + rw + 96 > fb->var.xres) {
+        scale = 1;
+        rw = text_width(right, scale);
+    }
     fill_rect(fb, 20, fb->var.yres - 62, fb->var.xres - 40, 1, color(fb, 42, 74, 82));
-    draw_text(fb, 36, fb->var.yres - 40, left, 2, color(fb, 151, 220, 231));
-    draw_text(fb, fb->var.xres - rw - 36, fb->var.yres - 40, right, 2, color(fb, 244, 241, 228));
+    draw_text(fb, 36, fb->var.yres - 40, left, scale, color(fb, 151, 220, 231));
+    draw_text(fb, fb->var.xres - rw - 36, fb->var.yres - 40, right, scale,
+              color(fb, 244, 241, 228));
 }
 
 static void draw_footer_three(struct framebuffer *fb, const char *left,
                               const char *center, const char *right)
 {
-    unsigned cw = text_width(center, 2), rw = text_width(right, 2);
+    unsigned scale = 2;
+    unsigned lw = text_width(left, scale), cw = text_width(center, scale);
+    unsigned rw = text_width(right, scale);
+    if (lw + cw + rw + 120 > fb->var.xres) {
+        scale = 1;
+        cw = text_width(center, scale);
+        rw = text_width(right, scale);
+    }
     fill_rect(fb, 20, fb->var.yres - 62, fb->var.xres - 40, 1, color(fb, 42, 74, 82));
-    draw_text(fb, 30, fb->var.yres - 40, left, 2, color(fb, 151, 220, 231));
+    draw_text(fb, 30, fb->var.yres - 40, left, scale, color(fb, 151, 220, 231));
     draw_text(fb, cw < fb->var.xres ? (fb->var.xres - cw) / 2 : 0,
-              fb->var.yres - 40, center, 2, color(fb, 244, 241, 228));
-    draw_text(fb, fb->var.xres - rw - 30, fb->var.yres - 40, right, 2,
+              fb->var.yres - 40, center, scale, color(fb, 244, 241, 228));
+    draw_text(fb, fb->var.xres - rw - 30, fb->var.yres - 40, right, scale,
               color(fb, 245, 177, 52));
 }
 
@@ -694,14 +766,17 @@ static void draw_scrollbar(struct framebuffer *fb, unsigned x, unsigned y,
     fill_rect(fb, x - 2, thumb_y, 6, thumb_height, thumb);
 }
 
+#define GUIDE_MENU_COUNT 14
+
 static void draw_menu(struct framebuffer *fb, unsigned selected)
 {
     static const char *items[] = {"Cartridges", "Wi-Fi", "Bluetooth Audio", "Nodes",
-                                  "Media", "Wikipedia", "Doom", "Developer Link",
-                                  "Display Test", "Input Test", "System Info"};
+                                  "Media", "Wikipedia", "Web Browser", "Semiotic Engine",
+                                  "Games", "Doom", "Developer Link", "Display Test", "Input Test",
+                                  "System Info"};
     unsigned row, first = selected > 2 ? selected - 2 : 0;
     char number[4];
-    if (first + 5 > 11) first = 6;
+    if (first + 5 > GUIDE_MENU_COUNT) first = GUIDE_MENU_COUNT - 5;
     draw_header(fb, "Home");
     for (row = 0; row < 5; ++row) {
         unsigned index = first + row, y = 92 + row * 59;
@@ -716,7 +791,7 @@ static void draw_menu(struct framebuffer *fb, unsigned selected)
         draw_text(fb, 88, y, number, 2, ink);
         draw_text(fb, 132, y, items[index], 2, ink);
     }
-    draw_scrollbar(fb, 48, 82, 275, 11, first, 5);
+    draw_scrollbar(fb, 48, 82, 275, GUIDE_MENU_COUNT, first, 5);
     (void)draw_rgba_asset(fb, ROSE_PATH, ROSE_WIDTH, ROSE_HEIGHT, 380, 96, stderr);
     draw_footer_three(fb, "+ Move", "(A) Open", "(B) Back"); present(fb);
 }
@@ -752,6 +827,54 @@ static void draw_doom_list(struct framebuffer *fb)
     if (guide_doom.message[0])
         draw_centered(fb, 390, guide_doom.message, 2, color(fb, 151, 220, 231));
     draw_footer_three(fb, "+ MOVE", "A PLAY", "B BACK"); present(fb);
+}
+
+static void draw_game_systems(struct framebuffer *fb)
+{
+    unsigned total = sizeof(guide_game_systems) / sizeof(guide_game_systems[0]);
+    unsigned first = guide_games.system_selected > 2 ? guide_games.system_selected - 2 : 0, row;
+    if (first + 5 > total) first = total - 5;
+    draw_header(fb, "GAMES");
+    for (row = 0; row < 5 && first + row < total; ++row) {
+        unsigned index = first + row, y = 92 + row * 59;
+        uint32_t ink = color(fb, 244, 241, 228);
+        if (index == guide_games.system_selected) {
+            fill_rect(fb, 71, y - 10, 500, 42, color(fb, 30, 27, 19));
+            fill_rect(fb, 71, y - 10, 4, 42, color(fb, 245, 177, 52));
+            ink = color(fb, 245, 177, 52);
+        }
+        draw_rect(fb, 71, y - 10, 500, 42, color(fb, 42, 74, 82));
+        draw_text(fb, 88, y, guide_game_systems[index].name, 2, ink);
+    }
+    draw_scrollbar(fb, 48, 82, 275, total, first, 5);
+    draw_footer_three(fb, "+ MOVE", "A OPEN", "B HOME"); present(fb);
+}
+
+static void draw_game_list(struct framebuffer *fb)
+{
+    unsigned first, row;
+    draw_header(fb, guide_game_systems[guide_games.system_selected].name);
+    if (!guide_games.count) {
+        draw_centered(fb, 170, "NO COMPATIBLE GAME FILES FOUND", 3, color(fb, 244, 241, 228));
+        draw_centered(fb, 235, "ADD YOUR FILES TO THE EXTERNAL GUIDE/GAMES FOLDER", 2,
+                      color(fb, 151, 220, 231));
+        draw_footer(fb, guide_games.message, "B SYSTEMS"); present(fb); return;
+    }
+    first = guide_games.selected > 2 ? guide_games.selected - 2 : 0;
+    if (first + 5 > guide_games.count) first = guide_games.count > 5 ? guide_games.count - 5 : 0;
+    for (row = 0; row < 5 && first + row < guide_games.count; ++row) {
+        unsigned index = first + row, y = 92 + row * 59;
+        uint32_t ink = color(fb, 244, 241, 228);
+        if (index == guide_games.selected) {
+            fill_rect(fb, 71, y - 10, 500, 42, color(fb, 30, 27, 19));
+            fill_rect(fb, 71, y - 10, 4, 42, color(fb, 245, 177, 52));
+            ink = color(fb, 245, 177, 52);
+        }
+        draw_rect(fb, 71, y - 10, 500, 42, color(fb, 42, 74, 82));
+        draw_text(fb, 88, y, guide_games.items[index].name, 2, ink);
+    }
+    draw_scrollbar(fb, 48, 82, 275, guide_games.count, first, 5);
+    draw_footer_three(fb, "+ MOVE", "A PLAY", "B SYSTEMS"); present(fb);
 }
 
 static void draw_display_test(struct framebuffer *fb)
@@ -1206,7 +1329,10 @@ static void draw_wikipedia_home(struct framebuffer *fb, const struct wikipedia_u
                       "PLAIN ARTICLES  NO WEB SCRIPTS", 2, color(fb, 151, 220, 231));
         draw_centered(fb, 320, "SEARCH TEXT IS SENT TO WIKIPEDIA", 2,
                       color(fb, 244, 241, 228));
-        draw_footer(fb, "A SEARCH", "B BACK");
+        if (access(GUIDE_WIKIPEDIA_RICH, X_OK) == 0)
+            draw_footer_three(fb, "A TEXT SEARCH", "X RICH READER", "B BACK");
+        else
+            draw_footer(fb, "A SEARCH", "B BACK");
     }
     present(fb);
 }
@@ -1221,6 +1347,28 @@ static void draw_wikipedia_keyboard(struct framebuffer *fb, const struct wikiped
     draw_centered(fb, 78, count, 2, color(fb, 151, 220, 231));
     draw_centered(fb, 110, shown, 2, color(fb, 245, 177, 52));
     draw_keyboard_keys(fb, wiki->keyboard_page, wiki->cursor, "SEARCH");
+    draw_footer(fb, "A SELECT  X SPACE  Y DELETE", "B CANCEL"); present(fb);
+}
+
+static void draw_web_keyboard(struct framebuffer *fb, const struct web_ui *web)
+{
+    char count[40], shown[61], upper[61];
+    const char *visible = web->text;
+    size_t visible_length = web->text_length;
+    if (visible_length > 60) {
+        visible += visible_length - 60;
+        visible_length = 60;
+    }
+    memcpy(shown, visible, visible_length);
+    shown[visible_length] = '\0';
+    safe_uppercase(upper, sizeof(upper), shown);
+    snprintf(count, sizeof(count), "ADDRESS OR SEARCH  %u OF %u",
+             (unsigned)web->text_length, GUIDE_WEB_TEXT_MAX);
+    draw_header(fb, "WEB BROWSER");
+    draw_centered(fb, 69, web->message[0] ? web->message : count, 1,
+                  color(fb, 151, 220, 231));
+    draw_centered(fb, 104, upper, 1, color(fb, 245, 177, 52));
+    draw_keyboard_keys(fb, web->keyboard_page, web->cursor, "OPEN");
     draw_footer(fb, "A SELECT  X SPACE  Y DELETE", "B CANCEL"); present(fb);
 }
 
@@ -1259,7 +1407,9 @@ static size_t wikipedia_draw_lines(struct framebuffer *fb, const char *text,
 {
     unsigned line;
     size_t position = offset;
-    for (line = 0; line < 14 && position < length; ++line) {
+    /* Thirteen rows keep the final 14-pixel glyph safely above the footer's
+     * separator on the 480-pixel Deck display. */
+    for (line = 0; line < 13 && position < length; ++line) {
         char visible[49];
         size_t start, end, next, count, candidate;
         while (position < length &&
@@ -1280,7 +1430,7 @@ static size_t wikipedia_draw_lines(struct framebuffer *fb, const char *text,
         count = next - start;
         if (count > 48) count = 48;
         memcpy(visible, text + start, count); visible[count] = '\0';
-        draw_text(fb, 30, 90 + line * 23, visible, 2, color(fb, 244, 241, 228));
+        draw_text(fb, 30, 94 + line * 23, visible, 2, color(fb, 244, 241, 228));
         position = next;
         while (position < length &&
                (text[position] == '\r' || text[position] == ' ' || text[position] == '\t'))
@@ -1304,11 +1454,92 @@ static void draw_wikipedia_article(struct framebuffer *fb, struct wikipedia_ui *
         wiki->page_offsets[wiki->page + 1] = next;
         if (wiki->known_pages < wiki->page + 2) wiki->known_pages = wiki->page + 2;
     }
-    snprintf(position, sizeof(position), "B BACK  PAGE %u%s", wiki->page + 1,
-             next < wiki->text_length ? "  MORE" : "  END");
+    snprintf(position, sizeof(position), "B BACK  P%u%s", wiki->page + 1,
+             next < wiki->text_length ? "+" : " END");
     snprintf(links, sizeof(links), wiki->link_count ? "A LINKS %u" : "NO LINKS",
              wiki->link_count);
-    draw_footer(fb, links, position); present(fb);
+    if (guide_semiotic_installed())
+        draw_footer_three(fb, links, "X SUMMARY", position);
+    else draw_footer(fb, links, position);
+    present(fb);
+}
+
+static void draw_se_home(struct framebuffer *fb)
+{
+    draw_header(fb, "SEMIOTIC ENGINE");
+    if (!guide_semiotic_installed()) {
+        draw_centered(fb, 142, "INTERFACE NOT INSTALLED", 4,
+                      color(fb, 245, 177, 52));
+        draw_centered(fb, 220, "INSTALL THE ENGINE INTERFACE CARTRIDGE", 2,
+                      color(fb, 244, 241, 228));
+        draw_footer(fb, "CARTRIDGES", "B BACK");
+        present(fb);
+        return;
+    }
+    draw_centered(fb, 96, "INTERFACE INSTALLED", 4, color(fb, 104, 207, 72));
+    draw_centered(fb, 164, "CURRENT TOOL  ARTICLE SUMMARY", 3,
+                  color(fb, 244, 241, 228));
+    draw_centered(fb, 222, "OPEN WIKIPEDIA AND CHOOSE AN ARTICLE", 2,
+                  color(fb, 151, 220, 231));
+    draw_centered(fb, 270, "PRESS X IN THE ARTICLE TO SUMMARIZE", 2,
+                  color(fb, 245, 177, 52));
+    draw_centered(fb, 318, "PAIR OR RECONNECT UNDER NODES IF NEEDED", 2,
+                  color(fb, 244, 241, 228));
+    draw_footer(fb, "A OPEN WIKIPEDIA", "B BACK");
+    present(fb);
+}
+
+static void draw_se_consent(struct framebuffer *fb, const struct wikipedia_ui *wiki)
+{
+    char title[49], amount[64];
+    size_t supplied = wiki->text_length > 32000 ? 32000 : wiki->text_length;
+    safe_uppercase(title, sizeof(title), wiki->title);
+    snprintf(amount, sizeof(amount), "%zu OF %zu TEXT BYTES SELECTED", supplied,
+             wiki->text_length);
+    draw_header(fb, "SEMIOTIC ENGINE");
+    draw_centered(fb, 88, "REVIEW CONTEXT", 4, color(fb, 245, 177, 52));
+    draw_centered(fb, 154, title, 2, color(fb, 151, 220, 231));
+    draw_centered(fb, 202, amount, 2, color(fb, 244, 241, 228));
+    draw_centered(fb, 260, "THIS TEXT WILL GO TO YOUR PAIRED NODE", 2,
+                  color(fb, 244, 241, 228));
+    draw_centered(fb, 304, "RESULTS INFORM  THEY DO NOT ACT", 2,
+                  color(fb, 104, 207, 72));
+    draw_footer(fb, "A SEND FOR SUMMARY", "B CANCEL"); present(fb);
+}
+
+static void draw_se_wait(struct framebuffer *fb)
+{
+    draw_header(fb, "SEMIOTIC ENGINE");
+    draw_centered(fb, 124, "READING SELECTED TEXT", 4, color(fb, 244, 241, 228));
+    draw_centered(fb, 202, "THE DECK REMAINS IN CONTROL", 3,
+                  color(fb, 245, 177, 52));
+    draw_centered(fb, 264, "MAXIMUM WAIT  FIVE MINUTES", 2,
+                  color(fb, 151, 220, 231));
+    draw_centered(fb, 310, guide_se.message[0] ? guide_se.message : "WORKING LOCALLY ON NODE",
+                  2, color(fb, 244, 241, 228));
+    draw_footer(fb, "POWER MENU REMAINS AVAILABLE", "B CANCEL"); present(fb);
+}
+
+static void draw_se_result(struct framebuffer *fb)
+{
+    char page[48];
+    size_t next;
+    draw_header(fb, "ENGINE SUMMARY");
+    if (!guide_se.summary || !guide_se.summary_length) {
+        draw_centered(fb, 154, guide_se.message[0] ? guide_se.message : "NO SUMMARY RETURNED",
+                      3, color(fb, 220, 73, 73));
+        draw_footer(fb, "INFORMATION ONLY", "B ARTICLE"); present(fb); return;
+    }
+    next = wikipedia_draw_lines(fb, guide_se.summary, guide_se.summary_length,
+                                guide_se.page_offsets[guide_se.page]);
+    if (next < guide_se.summary_length && guide_se.page + 1 < 512) {
+        guide_se.page_offsets[guide_se.page + 1] = next;
+        if (guide_se.known_pages < guide_se.page + 2)
+            guide_se.known_pages = guide_se.page + 2;
+    }
+    snprintf(page, sizeof(page), "B ARTICLE  P%u%s", guide_se.page + 1,
+             next < guide_se.summary_length ? "+" : " END");
+    draw_footer_three(fb, "ENGINE TEXT", "VERIFY CLAIMS", page); present(fb);
 }
 
 static void draw_wikipedia_links(struct framebuffer *fb, const struct wikipedia_ui *wiki)
@@ -1373,6 +1604,8 @@ static void draw_system_info(struct framebuffer *fb, unsigned input_count)
     char line[80];
     draw_header(fb, "SYSTEM");
     draw_centered(fb, 96, "SYSTEM INFO", 4, color(fb, 244, 241, 228));
+    snprintf(line, sizeof(line), "BUILD %s", GUIDE_BUILD_ID);
+    draw_centered(fb, 142, line, 2, color(fb, 104, 207, 72));
     snprintf(line, sizeof(line), "DISPLAY %u X %u", fb->var.xres, fb->var.yres);
     draw_text(fb, 86, 178, line, 3, color(fb, 151, 220, 231));
     snprintf(line, sizeof(line), "INPUT DEVICES %u", input_count);
@@ -1528,7 +1761,8 @@ static void draw_cartridge_detail(struct framebuffer *fb,
     draw_centered(fb, 304, capability, 2, color(fb, 244, 241, 228));
     draw_centered(fb, 344, action, 2, color(fb, 151, 220, 231));
     if (guide_wifi_install_supported(item) || guide_developer_link_install_supported(item) ||
-        guide_wikipedia_install_supported(item))
+        guide_wikipedia_install_supported(item) || guide_semiotic_install_supported(item) ||
+        guide_emulation_install_supported(item))
         draw_footer(fb, "A INSTALL", "B BACK");
     else draw_footer(fb, "VIEW ONLY", "B BACK");
     present(fb);
@@ -1538,15 +1772,22 @@ static void draw_install_confirm(struct framebuffer *fb, const struct guide_cart
 {
     int developer = guide_developer_link_install_supported(item);
     int wikipedia = guide_wikipedia_install_supported(item);
+    int semiotic = guide_semiotic_install_supported(item);
+    int emulation = guide_emulation_install_supported(item);
     draw_header(fb, "INSTALL");
     draw_centered(fb, 100, developer ? "INSTALL DEVELOPER LINK" :
-                  wikipedia ? "INSTALL WIKIPEDIA" : "INSTALL WIFI", 4,
+                  wikipedia ? "INSTALL WIKIPEDIA" :
+                  semiotic ? "INSTALL ENGINE INTERFACE" :
+                  emulation ? "INSTALL EMULATION" : "INSTALL WIFI", 4,
                   color(fb, 244, 241, 228));
     draw_centered(fb, 178, "MODIFIES THIS DECK", 3, color(fb, 245, 177, 52));
     draw_centered(fb, 240, "ONLY FOR RG35XX H  KERNEL 4.9.170", 2,
                   color(fb, 151, 220, 231));
     draw_centered(fb, 286, developer ? "KEY ONLY  OFF BY DEFAULT" :
-                  wikipedia ? "PLAIN TEXT  VERIFIED HTTPS" : "NO NETWORK PASSWORDS INCLUDED", 2,
+                  wikipedia ? "PLAIN TEXT  VERIFIED HTTPS" :
+                  semiotic ? "NO MODEL OR NEW AUTHORITY INCLUDED" :
+                  emulation ? "NO GAMES OR BIOS INCLUDED" :
+                  "NO NETWORK PASSWORDS INCLUDED", 2,
                   color(fb, 244, 241, 228));
     draw_centered(fb, 342, "FAILED CHANGES WILL BE UNDONE", 2,
                   color(fb, 104, 207, 72));
@@ -1718,10 +1959,70 @@ static void stop_any_media_owner(FILE *log)
     fflush(log);
 }
 
+static int supervisor_descriptor(void)
+{
+    const char *value;
+    char *end;
+    long descriptor;
+    int flags;
+    if (guide_supervisor_fd != -2) return guide_supervisor_fd;
+    value = getenv(GUIDE_SUPERVISOR_FD_ENV);
+    if (!value || !value[0]) { guide_supervisor_fd = -1; return -1; }
+    errno = 0;
+    descriptor = strtol(value, &end, 10);
+    if (errno || end == value || *end || descriptor < 3 || descriptor > 1048576) {
+        guide_supervisor_fd = -1;
+        return -1;
+    }
+    guide_supervisor_fd = (int)descriptor;
+    flags = fcntl(guide_supervisor_fd, F_GETFD);
+    if (flags >= 0) (void)fcntl(guide_supervisor_fd, F_SETFD, flags | FD_CLOEXEC);
+    return guide_supervisor_fd;
+}
+
+static int supervisor_exchange(const struct guide_supervisor_request *request,
+                               struct guide_supervisor_response *response)
+{
+    int descriptor = supervisor_descriptor();
+    ssize_t transferred;
+    if (descriptor < 0) { errno = ENOTCONN; return -1; }
+    transferred = send(descriptor, request, sizeof(*request), MSG_NOSIGNAL);
+    if (transferred != (ssize_t)sizeof(*request)) return -1;
+    do transferred = recv(descriptor, response, sizeof(*response), 0);
+    while (transferred < 0 && errno == EINTR);
+    if (transferred != (ssize_t)sizeof(*response) ||
+        response->magic != GUIDE_SUPERVISOR_MAGIC ||
+        response->version != GUIDE_SUPERVISOR_VERSION) {
+        errno = EPROTO;
+        return -1;
+    }
+    return 0;
+}
+
+static int supervisor_request(uint32_t command, uint32_t application,
+                              const char *argument0, const char *argument1,
+                              struct guide_supervisor_response *response)
+{
+    struct guide_supervisor_request request;
+    memset(&request, 0, sizeof(request));
+    memset(response, 0, sizeof(*response));
+    request.magic = GUIDE_SUPERVISOR_MAGIC;
+    request.version = GUIDE_SUPERVISOR_VERSION;
+    request.command = command;
+    request.application = application;
+    request.priority = GUIDE_PRIORITY_FOREGROUND;
+    snprintf(request.argument0, sizeof(request.argument0), "%s",
+             argument0 ? argument0 : "");
+    snprintf(request.argument1, sizeof(request.argument1), "%s",
+             argument1 ? argument1 : "");
+    return supervisor_exchange(&request, response);
+}
+
 static void safe_shutdown(struct framebuffer *fb, FILE *log,
                           struct guide_cartridge_catalog *catalog)
 {
     int remounted, remount_error = 0, reboot_error;
+    struct guide_supervisor_response response;
     char wifi_message[80];
     draw_header(fb, "POWER");
     draw_centered(fb, 176, "SHUTTING DOWN", 5,
@@ -1742,6 +2043,14 @@ static void safe_shutdown(struct framebuffer *fb, FILE *log,
     (void)guide_wifi_disconnect(log, wifi_message, sizeof(wifi_message));
     guide_cartridge_release(catalog, log);
     sync();
+    if (supervisor_request(GUIDE_SUPERVISOR_SHUTDOWN, 0, NULL, NULL,
+                           &response) == 0 &&
+        response.result == GUIDE_RESULT_SHUTTING_DOWN) {
+        fprintf(log, "shutdown authority transferred to supervisor\n");
+        fflush(log);
+        for (;;) pause();
+    }
+    fprintf(log, "supervisor unavailable; using emergency shell shutdown\n");
     remounted = mount(NULL, "/", NULL, MS_REMOUNT | MS_RDONLY, NULL);
     if (remounted != 0) {
         remount_error = errno;
@@ -1779,12 +2088,157 @@ static void safe_shutdown(struct framebuffer *fb, FILE *log,
     for (;;) sleep(3600);
 }
 
+static void semiotic_release_result(void)
+{
+    free(guide_se.summary);
+    guide_se.summary = NULL;
+    guide_se.summary_length = 0;
+    guide_se.page = 0;
+    guide_se.known_pages = 1;
+    memset(guide_se.page_offsets, 0, sizeof(guide_se.page_offsets));
+}
+
+static int semiotic_load_result(FILE *log)
+{
+    struct stat details;
+    int descriptor;
+    ssize_t count;
+    semiotic_release_result();
+    if (lstat(GUIDE_SE_SUMMARY, &details) != 0 || !S_ISREG(details.st_mode) ||
+        S_ISLNK(details.st_mode) || details.st_size < 1 ||
+        details.st_size > GUIDE_SE_TEXT_MAX) return -1;
+    guide_se.summary = malloc((size_t)details.st_size + 1);
+    if (!guide_se.summary) return -1;
+    descriptor = open(GUIDE_SE_SUMMARY, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    if (descriptor < 0) goto failed;
+    count = read(descriptor, guide_se.summary, (size_t)details.st_size);
+    close(descriptor);
+    if (count != details.st_size) goto failed;
+    guide_se.summary[count] = '\0';
+    guide_se.summary_length = (size_t)count;
+    unlink(GUIDE_SE_SUMMARY);
+    unlink("/run/guideos-se-uncertainty.txt");
+    fprintf(log, "semiotic result loaded bytes=%zu\n", guide_se.summary_length);
+    fflush(log);
+    return 0;
+failed:
+    semiotic_release_result();
+    return -1;
+}
+
+static int semiotic_write_input(const char *text, size_t length)
+{
+    const char *temporary = GUIDE_SE_INPUT ".new";
+    int descriptor;
+    size_t used = 0;
+    if (!text || !length) return -1;
+    if (length > 32000) {
+        length = 32000;
+        while (length > 0 && (((unsigned char)text[length] & 0xc0u) == 0x80u))
+            --length;
+    }
+    unlink(temporary);
+    descriptor = open(temporary, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
+    if (descriptor < 0) return -1;
+    while (used < length) {
+        ssize_t written = write(descriptor, text + used, length - used);
+        if (written <= 0) { close(descriptor); unlink(temporary); return -1; }
+        used += (size_t)written;
+    }
+    if (fsync(descriptor) != 0 || close(descriptor) != 0 ||
+        rename(temporary, GUIDE_SE_INPUT) != 0) {
+        unlink(temporary); return -1;
+    }
+    return 0;
+}
+
+static int semiotic_start(const struct wikipedia_ui *wiki, FILE *log)
+{
+    int descriptors[2];
+    pid_t child;
+    if (guide_se.pid > 0 || access(GUIDE_SE_BINARY, X_OK) != 0 ||
+        semiotic_write_input(wiki->text, wiki->text_length) != 0) return -1;
+    unlink(GUIDE_SE_SUMMARY);
+    unlink("/run/guideos-se-uncertainty.txt");
+    if (pipe(descriptors) != 0) { unlink(GUIDE_SE_INPUT); return -1; }
+    child = fork();
+    if (child == 0) {
+        (void)dup2(descriptors[1], STDOUT_FILENO);
+        (void)dup2(descriptors[1], STDERR_FILENO);
+        close(descriptors[0]); close(descriptors[1]);
+        execl(GUIDE_SE_BINARY, "guide-se-deck", "summarize", GUIDE_SE_INPUT,
+              (char *)NULL);
+        _exit(127);
+    }
+    close(descriptors[1]);
+    if (child < 0) { close(descriptors[0]); unlink(GUIDE_SE_INPUT); return -1; }
+    guide_se.pid = child;
+    guide_se.output_fd = descriptors[0];
+    snprintf(guide_se.message, sizeof(guide_se.message), "WORKING LOCALLY ON NODE");
+    fprintf(log, "semiotic request started pid=%ld bytes=%zu\n", (long)child,
+            wiki->text_length > 32000 ? (size_t)32000 : wiki->text_length);
+    fflush(log);
+    return 0;
+}
+
+static int semiotic_poll(FILE *log)
+{
+    int status = 0;
+    pid_t ended;
+    char output[512];
+    ssize_t count = 0;
+    if (guide_se.pid <= 0) return 0;
+    ended = waitpid(guide_se.pid, &status, WNOHANG);
+    if (ended == 0) return 0;
+    if (guide_se.output_fd >= 0) {
+        count = read(guide_se.output_fd, output, sizeof(output) - 1);
+        close(guide_se.output_fd); guide_se.output_fd = -1;
+    }
+    if (count < 0) count = 0;
+    output[count] = '\0';
+    guide_se.pid = 0;
+    unlink(GUIDE_SE_INPUT);
+    if (ended > 0 && WIFEXITED(status) && WEXITSTATUS(status) == 0 &&
+        strstr(output, "GUIDE-SE-SUMMARY-1") && semiotic_load_result(log) == 0) {
+        snprintf(guide_se.message, sizeof(guide_se.message), "SUMMARY COMPLETE");
+        return 1;
+    }
+    {
+        const char *error = strstr(output, "ERROR=");
+        snprintf(guide_se.message, sizeof(guide_se.message), "%.90s",
+                 error ? error + 6 : "ENGINE REQUEST DID NOT COMPLETE");
+        if (strchr(guide_se.message, '\n')) *strchr(guide_se.message, '\n') = '\0';
+    }
+    fprintf(log, "semiotic request ended status=%d output=%.160s\n", status, output);
+    fflush(log);
+    return -1;
+}
+
+static void semiotic_cancel(FILE *log)
+{
+    int status = 0;
+    if (guide_se.pid > 0) {
+        kill(guide_se.pid, SIGTERM);
+        if (wait_helper_bounded(guide_se.pid, &status, 1500, log, "semiotic") != 0) {
+            kill(guide_se.pid, SIGKILL);
+            (void)waitpid(guide_se.pid, &status, 0);
+        }
+        fprintf(log, "semiotic request cancelled pid=%ld\n", (long)guide_se.pid);
+        fflush(log);
+        guide_se.pid = 0;
+    }
+    if (guide_se.output_fd >= 0) { close(guide_se.output_fd); guide_se.output_fd = -1; }
+    unlink(GUIDE_SE_INPUT);
+    unlink(GUIDE_SE_SUMMARY);
+    unlink("/run/guideos-se-uncertainty.txt");
+}
+
 static void redraw_screen(struct framebuffer *fb, enum screen screen,
                           unsigned selected, unsigned input_count,
                           const struct guide_cartridge_catalog *catalog,
                           const char *install_message, int install_success,
                           const struct wifi_ui *wifi, struct node_ui *node,
-                          struct wikipedia_ui *wiki)
+                          struct wikipedia_ui *wiki, const struct web_ui *web)
 {
     if (screen == SCREEN_MENU) draw_menu(fb, selected);
     else if (screen == SCREEN_WIFI_LIST) draw_wifi_list(fb, wifi);
@@ -1809,10 +2263,28 @@ static void redraw_screen(struct framebuffer *fb, enum screen screen,
     else if (screen == SCREEN_WIKIPEDIA_RESULTS) draw_wikipedia_results(fb, wiki);
     else if (screen == SCREEN_WIKIPEDIA_ARTICLE) draw_wikipedia_article(fb, wiki);
     else if (screen == SCREEN_WIKIPEDIA_LINKS) draw_wikipedia_links(fb, wiki);
+    else if (screen == SCREEN_WEB_KEYBOARD) draw_web_keyboard(fb, web);
+    else if (screen == SCREEN_SE_HOME) draw_se_home(fb);
+    else if (screen == SCREEN_SE_CONSENT) draw_se_consent(fb, wiki);
+    else if (screen == SCREEN_SE_WAIT) draw_se_wait(fb);
+    else if (screen == SCREEN_SE_RESULT) draw_se_result(fb);
+    else if (screen == SCREEN_GAME_SYSTEMS) draw_game_systems(fb);
+    else if (screen == SCREEN_GAME_LIST) draw_game_list(fb);
     else if (screen == SCREEN_DOOM_LIST) draw_doom_list(fb);
     else if (screen == SCREEN_DISPLAY) draw_display_test(fb);
     else if (screen == SCREEN_INPUT) draw_input_test(fb, 0, 0, 0);
     else if (screen == SCREEN_SYSTEM) draw_system_info(fb, input_count);
+}
+
+static int screen_allows_status_refresh(enum screen screen)
+{
+    /* These screens either surrender the framebuffer to another process or
+     * deliberately cover it with a safety-critical prompt. */
+    return screen != SCREEN_MEDIA_PLAYING &&
+           screen != SCREEN_MEDIA_SUBTITLES &&
+           screen != SCREEN_GAME_PLAYING &&
+           screen != SCREEN_DOOM_PLAYING &&
+           screen != SCREEN_SHUTDOWN;
 }
 
 static void close_inputs(struct input_set *inputs)
@@ -1936,6 +2408,46 @@ static void stop_stick_repeats(struct input_set *inputs)
             inputs->axes[source][code].repeat_at_ms = 0;
             inputs->axes[source][code].repeats_left = 0;
         }
+}
+
+static int supervised_app_run(struct input_set *inputs, FILE *log,
+                              uint32_t application, const char *label,
+                              const char *argument0, const char *argument1,
+                              struct guide_supervisor_response *response)
+{
+    int result;
+    /* A foreground application becomes the sole input/display owner. Closing
+     * the shell descriptors prevents duplicate input and queued actions. */
+    close_inputs(inputs);
+    fprintf(log, "%s foreground request\n", label); fflush(log);
+    result = supervisor_request(GUIDE_SUPERVISOR_RUN, application,
+                                argument0, argument1, response);
+    open_inputs(inputs, log);
+    stop_stick_repeats(inputs);
+    if (result != 0) {
+        fprintf(log, "%s supervisor request failed error=%s\n",
+                label, strerror(errno)); fflush(log);
+        return -1;
+    }
+    fprintf(log, "%s foreground result=%u status=%d message=%s\n",
+            label, response->result, response->wait_status, response->message);
+    fflush(log);
+    return response->result == GUIDE_RESULT_COMPLETE ? 0 :
+           response->result == GUIDE_RESULT_POWER_REQUESTED ? 1 : -1;
+}
+
+static int wikipedia_rich_run(struct input_set *inputs, FILE *log)
+{
+    struct guide_supervisor_response response;
+    return supervised_app_run(inputs, log, GUIDE_APPLICATION_WIKIPEDIA,
+                              "guide-wikipedia-rich", NULL, NULL, &response);
+}
+
+static int web_browser_run(struct input_set *inputs, FILE *log, const char *address)
+{
+    struct guide_supervisor_response response;
+    return supervised_app_run(inputs, log, GUIDE_APPLICATION_WEB_BROWSER,
+                              "guide-web-browser", address, NULL, &response);
 }
 
 static void wifi_scan_screen(struct framebuffer *fb, struct wifi_ui *wifi, FILE *log)
@@ -2490,54 +3002,82 @@ static void doom_scan(FILE *log)
     fflush(log);
 }
 
-static int doom_start(FILE *log)
+static int doom_start(struct input_set *inputs, FILE *log)
 {
-    pid_t child;
-    int descriptor;
+    struct guide_supervisor_response response;
     if (guide_doom.selected >= guide_doom.count || access(GUIDE_DOOM_BINARY, X_OK) != 0)
         return -1;
-    child = fork();
-    if (child == 0) {
-        (void)setpgid(0, 0);
-        (void)setpriority(PRIO_PROCESS, 0, 3);
-        descriptor = open("/var/log/guide-doom.log",
-                          O_WRONLY | O_CREAT | O_APPEND | O_NOFOLLOW, 0600);
-        if (descriptor >= 0) {
-            (void)dup2(descriptor, STDOUT_FILENO);
-            (void)dup2(descriptor, STDERR_FILENO);
-            if (descriptor > STDERR_FILENO) close(descriptor);
-        }
-        execl(GUIDE_DOOM_BINARY, "guide-doom", guide_doom.items[guide_doom.selected].path,
-              (char *)NULL);
-        _exit(127);
+    return supervised_app_run(inputs, log, GUIDE_APPLICATION_DOOM,
+                              "guide-doom",
+                              guide_doom.items[guide_doom.selected].path,
+                              NULL, &response);
+}
+
+static int game_extension_allowed(const char *name, const char *extensions)
+{
+    const char *suffix = strrchr(name, '.');
+    const char *item = extensions;
+    if (!suffix) return 0;
+    while (item && *item) {
+        const char *end = strchr(item, ',');
+        size_t length = end ? (size_t)(end - item) : strlen(item);
+        if (strlen(suffix) == length && strncasecmp(suffix, item, length) == 0) return 1;
+        item = end ? end + 1 : NULL;
     }
-    if (child < 0) return -1;
-    (void)setpgid(child, child);
-    guide_doom.pid = child;
-    fprintf(log, "doom started pid=%ld wad=%s\n", (long)child,
-            guide_doom.items[guide_doom.selected].path); fflush(log);
     return 0;
 }
 
-static void doom_stop(FILE *log)
+static void game_scan_directory(const char *directory, FILE *log)
 {
-    int status = 0, count;
-    struct timespec pause = {0, 50000000};
-    pid_t pid = guide_doom.pid;
-    if (pid <= 0) return;
-    (void)kill(-pid, SIGTERM);
-    for (count = 0; count < 20; ++count) {
-        pid_t ended = waitpid(pid, &status, WNOHANG);
-        if (ended == pid || (ended < 0 && errno == ECHILD)) break;
-        nanosleep(&pause, NULL);
+    const struct game_system *system = &guide_game_systems[guide_games.system_selected];
+    DIR *opened = opendir(directory);
+    struct dirent *entry;
+    if (!opened) return;
+    while ((entry = readdir(opened)) && guide_games.count < GUIDE_GAME_MAX) {
+        struct stat info;
+        struct doom_item *item;
+        int length;
+        if (!game_extension_allowed(entry->d_name, system->extensions) || strlen(entry->d_name) > 240)
+            continue;
+        item = &guide_games.items[guide_games.count];
+        length = snprintf(item->path, sizeof(item->path), "%s/%s", directory, entry->d_name);
+        if (length < 0 || (size_t)length >= sizeof(item->path) ||
+            lstat(item->path, &info) != 0 || !S_ISREG(info.st_mode) || info.st_size <= 0)
+            continue;
+        snprintf(item->name, sizeof(item->name), "%.*s", 80, entry->d_name);
+        ++guide_games.count;
     }
-    if (count == 20) {
-        (void)kill(-pid, SIGKILL);
-        (void)waitpid(pid, &status, 0);
-        fprintf(log, "doom required forced stop pid=%ld\n", (long)pid);
-    } else fprintf(log, "doom stopped pid=%ld status=%d\n", (long)pid, status);
-    guide_doom.pid = 0;
+    closedir(opened);
+    fprintf(log, "games scanned system=%s directory=%s total=%u\n",
+            system->id, directory, guide_games.count);
+}
+
+static void game_scan(FILE *log)
+{
+    const struct game_system *system = &guide_game_systems[guide_games.system_selected];
+    char canonical[256], friendly[256];
+    pid_t pid = guide_games.pid;
+    guide_games.count = guide_games.selected = 0;
+    guide_games.pid = pid;
+    snprintf(canonical, sizeof(canonical), "/media/guide-card/GUIDE/GAMES/%s", system->folder);
+    snprintf(friendly, sizeof(friendly), "/media/guide-card/Guide/Games/%s", system->folder);
+    game_scan_directory(canonical, log); game_scan_directory(friendly, log);
+    qsort(guide_games.items, guide_games.count, sizeof(guide_games.items[0]), doom_compare);
+    snprintf(guide_games.message, sizeof(guide_games.message), "%u FILE%s READY",
+             guide_games.count, guide_games.count == 1 ? "" : "S");
     fflush(log);
+}
+
+static int game_start(struct input_set *inputs, FILE *log)
+{
+    const struct game_system *system = &guide_game_systems[guide_games.system_selected];
+    struct guide_supervisor_response response;
+    if (guide_games.selected >= guide_games.count || access(GUIDE_EMULATOR_BINARY, X_OK) != 0)
+        return -1;
+    return supervised_app_run(inputs, log, GUIDE_APPLICATION_EMULATOR,
+                              "guide-emulator", system->id,
+                              guide_games.items[guide_games.selected].path,
+                              &response);
 }
 
 static int node_media_find_audio(const struct node_ui *node, int direction, int wrap,
@@ -2824,6 +3364,90 @@ static void wikipedia_keyboard_select(struct framebuffer *fb,
     }
 }
 
+static int web_keyboard_select(struct framebuffer *fb, struct web_ui *web)
+{
+    unsigned row = web->cursor / 10, column = web->cursor % 10;
+    if (row < 4) {
+        if (column < keyboard_row_length(row) &&
+            web->text_length < GUIDE_WEB_TEXT_MAX) {
+            web->text[web->text_length++] =
+                keyboard_row(web->keyboard_page, row)[column];
+            web->text[web->text_length] = '\0';
+        }
+    } else if (column == 0) {
+        web->keyboard_page = web->keyboard_page == 0 ? 1 : 0;
+    } else if (column == 1) {
+        web->keyboard_page = web->keyboard_page == 2 ? 0 : 2;
+    } else if (column == 2) {
+        if (web->text_length < GUIDE_WEB_TEXT_MAX) {
+            web->text[web->text_length++] = ' ';
+            web->text[web->text_length] = '\0';
+        }
+    } else if (column == 3) {
+        if (web->text_length) web->text[--web->text_length] = '\0';
+    } else if (column == 4) {
+        if (!web->text_length) {
+            snprintf(web->message, sizeof(web->message), "ENTER AN ADDRESS OR SEARCH");
+        } else {
+            web->message[0] = '\0';
+            return 1;
+        }
+    } else {
+        return -1;
+    }
+    draw_web_keyboard(fb, web);
+    return 0;
+}
+
+static int web_unreserved(unsigned char character)
+{
+    return (character >= 'a' && character <= 'z') ||
+           (character >= 'A' && character <= 'Z') ||
+           (character >= '0' && character <= '9') ||
+           character == '-' || character == '_' || character == '.' ||
+           character == '~';
+}
+
+static int web_build_address(const char *text, char *address, size_t capacity)
+{
+    static const char search_prefix[] = "https://duckduckgo.com/html/?q=";
+    static const char hex[] = "0123456789ABCDEF";
+    const unsigned char *cursor = (const unsigned char *)text;
+    size_t used = 0;
+    int search = strchr(text, ' ') != NULL;
+
+    if (!search && (strncasecmp(text, "http://", 7) == 0 ||
+                    strncasecmp(text, "https://", 8) == 0 ||
+                    strncasecmp(text, "about:", 6) == 0)) {
+        if (snprintf(address, capacity, "%s", text) >= (int)capacity) return -1;
+        return 0;
+    }
+    if (!search && (strchr(text, '.') || strchr(text, ':'))) {
+        if (snprintf(address, capacity, "https://%s", text) >= (int)capacity) return -1;
+        return 0;
+    }
+    if (sizeof(search_prefix) > capacity) return -1;
+    memcpy(address, search_prefix, sizeof(search_prefix) - 1);
+    used = sizeof(search_prefix) - 1;
+    while (*cursor) {
+        if (web_unreserved(*cursor)) {
+            if (used + 1 >= capacity) return -1;
+            address[used++] = (char)*cursor;
+        } else if (*cursor == ' ') {
+            if (used + 1 >= capacity) return -1;
+            address[used++] = '+';
+        } else {
+            if (used + 3 >= capacity) return -1;
+            address[used++] = '%';
+            address[used++] = hex[*cursor >> 4];
+            address[used++] = hex[*cursor & 15];
+        }
+        ++cursor;
+    }
+    address[used] = '\0';
+    return 0;
+}
+
 static enum action classify_event(struct input_set *inputs, int source,
                                   const struct input_event *event)
 {
@@ -2885,10 +3509,13 @@ static void run_shell(struct framebuffer *fb, FILE *log)
     struct wifi_ui wifi = {0};
     struct node_ui node = {0};
     struct wikipedia_ui wiki = {0};
+    struct web_ui web = {0};
     enum screen screen = SCREEN_MENU;
     enum screen previous_screen = SCREEN_MENU;
     unsigned selected = 0, idle_scans = 0;
     int link_state = guide_wifi_link_up();
+    int displayed_battery_percent = read_battery_percent();
+    long long next_battery_refresh = monotonic_milliseconds() + 10000;
     long long volume_indicator_until = 0;
     int volume_indicator_paused_video = 0;
     char install_message[96] = "", developer_message[96] = "";
@@ -2900,8 +3527,24 @@ static void run_shell(struct framebuffer *fb, FILE *log)
         enum action action;
         int source = -1;
         int received = next_event(&inputs, &event, &source);
+        if (monotonic_milliseconds() >= next_battery_refresh) {
+            int current_battery_percent = read_battery_percent();
+            next_battery_refresh = monotonic_milliseconds() + 10000;
+            if (current_battery_percent != displayed_battery_percent) {
+                displayed_battery_percent = current_battery_percent;
+                if (!volume_indicator_until && screen_allows_status_refresh(screen))
+                    redraw_screen(fb, screen, selected, (unsigned)inputs.count,
+                                  &catalog, install_message, install_success,
+                                  &wifi, &node, &wiki, &web);
+            }
+        }
         if (!received) {
             int current_link = guide_wifi_link_up();
+            int semiotic_finished = semiotic_poll(log);
+            if (semiotic_finished != 0 && screen == SCREEN_SE_WAIT) {
+                screen = SCREEN_SE_RESULT;
+                draw_se_result(fb);
+            }
             if (guide_doom.pid > 0) {
                 int doom_status = 0;
                 pid_t ended = waitpid(guide_doom.pid, &doom_status, WNOHANG);
@@ -2913,6 +3556,20 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                                  WIFEXITED(doom_status) && WEXITSTATUS(doom_status) == 0 ?
                                  "GAME CLOSED SAFELY" : "GAME STOPPED - SEE DIAGNOSTICS");
                         screen = SCREEN_DOOM_LIST; draw_doom_list(fb);
+                    }
+                }
+            }
+            if (guide_games.pid > 0) {
+                int game_status = 0;
+                pid_t ended = waitpid(guide_games.pid, &game_status, WNOHANG);
+                if (ended == guide_games.pid || (ended < 0 && errno == ECHILD)) {
+                    fprintf(log, "game ended status=%d\n", game_status); fflush(log);
+                    guide_games.pid = 0;
+                    if (screen == SCREEN_GAME_PLAYING) {
+                        snprintf(guide_games.message, sizeof(guide_games.message),
+                                 WIFEXITED(game_status) && WEXITSTATUS(game_status) == 0 ?
+                                 "GAME CLOSED SAFELY" : "GAME STOPPED - SEE DIAGNOSTICS");
+                        screen = SCREEN_GAME_LIST; draw_game_list(fb);
                     }
                 }
             }
@@ -2955,7 +3612,7 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                 if (screen != SCREEN_MEDIA_PLAYING)
                     redraw_screen(fb, screen, selected, (unsigned)inputs.count,
                                   &catalog, install_message, install_success,
-                                  &wifi, &node, &wiki);
+                                  &wifi, &node, &wiki, &web);
             }
             if (inputs.count == 0 && ++idle_scans % 60 == 0) open_inputs(&inputs, log);
             if (current_link != link_state && screen != SCREEN_SHUTDOWN) {
@@ -2969,7 +3626,7 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                 if (screen != SCREEN_MEDIA_PLAYING && screen != SCREEN_MEDIA_SUBTITLES)
                     redraw_screen(fb, screen, selected, (unsigned)inputs.count,
                                   &catalog, install_message, install_success,
-                                  &wifi, &node, &wiki);
+                                  &wifi, &node, &wiki, &web);
             }
             action = repeat_stick(&inputs);
             if (action == ACTION_NONE) continue;
@@ -3008,9 +3665,15 @@ static void run_shell(struct framebuffer *fb, FILE *log)
             volume_indicator_until = monotonic_milliseconds() + 900;
         } else if (action == ACTION_POWER && screen != SCREEN_SHUTDOWN) {
             stop_stick_repeats(&inputs);
-            previous_screen = screen == SCREEN_DOOM_PLAYING ? SCREEN_DOOM_LIST : screen;
+            previous_screen = screen == SCREEN_GAME_PLAYING ? SCREEN_GAME_LIST :
+                              screen == SCREEN_DOOM_PLAYING ? SCREEN_DOOM_LIST :
+                              screen == SCREEN_SE_WAIT ? SCREEN_WIKIPEDIA_ARTICLE : screen;
             screen = SCREEN_SHUTDOWN;
             draw_shutdown_confirm(fb);
+            if (guide_se.pid > 0) {
+                semiotic_cancel(log);
+                draw_shutdown_confirm(fb);
+            }
             /* Acknowledge the power key before doing even bounded cleanup. */
             if (node.playback_pid > 0) {
                 node_media_stop(&node, log);
@@ -3018,26 +3681,38 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                  * draw. Reassert the confirmation once ownership is gone. */
                 draw_shutdown_confirm(fb);
             }
-            if (guide_doom.pid > 0) {
-                doom_stop(log);
-                draw_shutdown_confirm(fb);
-            }
         } else if (screen == SCREEN_SHUTDOWN) {
             if (action == ACTION_OPEN) safe_shutdown(fb, log, &catalog);
             else if (action == ACTION_BACK) {
                 screen = previous_screen;
                 redraw_screen(fb, screen, selected, (unsigned)inputs.count,
-                              &catalog, install_message, install_success, &wifi, &node, &wiki);
+                              &catalog, install_message, install_success, &wifi, &node, &wiki, &web);
             }
         } else if (screen == SCREEN_MENU) {
-            if (action == ACTION_UP) { selected = selected == 0 ? 10 : selected - 1; draw_menu(fb, selected); }
-            else if (action == ACTION_DOWN) { selected = (selected + 1) % 11; draw_menu(fb, selected); }
+            if (action == ACTION_UP) { selected = selected == 0 ? GUIDE_MENU_COUNT - 1 : selected - 1; draw_menu(fb, selected); }
+            else if (action == ACTION_DOWN) { selected = (selected + 1) % GUIDE_MENU_COUNT; draw_menu(fb, selected); }
             else if (action == ACTION_OPEN) {
+                if (selected == 6) {
+                    if (!guide_wifi_link_up()) {
+                        draw_header(fb, "WEB BROWSER");
+                        draw_centered(fb, 180, "CONNECT WI-FI FIRST", 4,
+                                      color(fb, 245, 177, 52));
+                        draw_footer(fb, "NETWORK REQUIRED", "B HOME");
+                        present(fb);
+                    } else {
+                        memset(&web, 0, sizeof(web));
+                        web.keyboard_page = 0;
+                        screen = SCREEN_WEB_KEYBOARD;
+                        draw_web_keyboard(fb, &web);
+                    }
+                    continue;
+                }
                 screen = selected == 0 ? SCREEN_CARTRIDGE_LIST : selected == 1 ? SCREEN_WIFI_LIST :
                          selected == 2 ? SCREEN_BLUETOOTH : selected == 3 ? SCREEN_NODE_LIST :
                          selected == 4 ? SCREEN_MEDIA_LIST : selected == 5 ? SCREEN_WIKIPEDIA_HOME :
-                         selected == 6 ? SCREEN_DOOM_LIST : selected == 7 ? SCREEN_DEVELOPER_LINK :
-                         selected == 8 ? SCREEN_DISPLAY : selected == 9 ? SCREEN_INPUT : SCREEN_SYSTEM;
+                         selected == 7 ? SCREEN_SE_HOME : selected == 8 ? SCREEN_GAME_SYSTEMS :
+                         selected == 9 ? SCREEN_DOOM_LIST : selected == 10 ? SCREEN_DEVELOPER_LINK :
+                         selected == 11 ? SCREEN_DISPLAY : selected == 12 ? SCREEN_INPUT : SCREEN_SYSTEM;
                 if (screen == SCREEN_CARTRIDGE_LIST) {
                     /* A held stick must not carry its repeat into a new menu. */
                     stop_stick_repeats(&inputs);
@@ -3069,6 +3744,11 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                     draw_developer_link(fb, log, developer_message);
                 } else if (screen == SCREEN_WIKIPEDIA_HOME) {
                     wiki.message[0] = '\0'; draw_wikipedia_home(fb, &wiki);
+                } else if (screen == SCREEN_SE_HOME) {
+                    draw_se_home(fb);
+                } else if (screen == SCREEN_GAME_SYSTEMS) {
+                    stop_stick_repeats(&inputs);
+                    guide_cartridge_scan(&catalog, log); draw_game_systems(fb);
                 } else if (screen == SCREEN_DOOM_LIST) {
                     stop_stick_repeats(&inputs);
                     guide_cartridge_scan(&catalog, log);
@@ -3077,6 +3757,42 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                 else if (screen == SCREEN_INPUT) draw_input_test(fb, 0, 0, 0);
                 else draw_system_info(fb, (unsigned)inputs.count);
             }
+        } else if (screen == SCREEN_GAME_SYSTEMS &&
+                   (action == ACTION_UP || action == ACTION_LEFT)) {
+            unsigned total = sizeof(guide_game_systems) / sizeof(guide_game_systems[0]);
+            guide_games.system_selected = guide_games.system_selected == 0 ? total - 1 :
+                                          guide_games.system_selected - 1;
+            draw_game_systems(fb);
+        } else if (screen == SCREEN_GAME_SYSTEMS &&
+                   (action == ACTION_DOWN || action == ACTION_RIGHT)) {
+            unsigned total = sizeof(guide_game_systems) / sizeof(guide_game_systems[0]);
+            guide_games.system_selected = (guide_games.system_selected + 1) % total;
+            draw_game_systems(fb);
+        } else if (screen == SCREEN_GAME_SYSTEMS && action == ACTION_OPEN) {
+            game_scan(log); screen = SCREEN_GAME_LIST; draw_game_list(fb);
+        } else if (screen == SCREEN_GAME_LIST &&
+                   (action == ACTION_UP || action == ACTION_LEFT)) {
+            if (guide_games.count) guide_games.selected = guide_games.selected == 0 ?
+                guide_games.count - 1 : guide_games.selected - 1;
+            draw_game_list(fb);
+        } else if (screen == SCREEN_GAME_LIST &&
+                   (action == ACTION_DOWN || action == ACTION_RIGHT)) {
+            if (guide_games.count) guide_games.selected = (guide_games.selected + 1) % guide_games.count;
+            draw_game_list(fb);
+        } else if (screen == SCREEN_GAME_LIST && action == ACTION_OPEN) {
+            int result = guide_games.count ? game_start(&inputs, log) : -1;
+            if (result == 1) {
+                previous_screen = SCREEN_GAME_LIST;
+                screen = SCREEN_SHUTDOWN;
+                draw_shutdown_confirm(fb);
+            } else {
+                snprintf(guide_games.message, sizeof(guide_games.message), "%s",
+                         result == 0 ? "GAME CLOSED SAFELY" :
+                         "COULD NOT START - SEE DIAGNOSTICS");
+                draw_game_list(fb);
+            }
+        } else if (screen == SCREEN_GAME_LIST && action == ACTION_BACK) {
+            screen = SCREEN_GAME_SYSTEMS; draw_game_systems(fb);
         } else if (screen == SCREEN_DOOM_LIST &&
                    (action == ACTION_UP || action == ACTION_LEFT)) {
             if (guide_doom.count)
@@ -3089,11 +3805,15 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                 guide_doom.selected = (guide_doom.selected + 1) % guide_doom.count;
             draw_doom_list(fb);
         } else if (screen == SCREEN_DOOM_LIST && action == ACTION_OPEN) {
-            if (guide_doom.count && doom_start(log) == 0) {
-                screen = SCREEN_DOOM_PLAYING;
+            int result = guide_doom.count ? doom_start(&inputs, log) : -1;
+            if (result == 1) {
+                previous_screen = SCREEN_DOOM_LIST;
+                screen = SCREEN_SHUTDOWN;
+                draw_shutdown_confirm(fb);
             } else {
                 snprintf(guide_doom.message, sizeof(guide_doom.message),
-                         guide_doom.count ? "COULD NOT START - SEE DIAGNOSTICS" : "NO GAME DATA FOUND");
+                         !guide_doom.count ? "NO GAME DATA FOUND" : result == 0 ?
+                         "GAME CLOSED SAFELY" : "COULD NOT START - SEE DIAGNOSTICS");
                 draw_doom_list(fb);
             }
         } else if (screen == SCREEN_BLUETOOTH && action == ACTION_OPEN) {
@@ -3340,6 +4060,65 @@ static void run_shell(struct framebuffer *fb, FILE *log)
             wifi_keyboard_select(fb, &wifi, &screen, log);
         } else if (screen == SCREEN_WIFI_RESULT && action == ACTION_BACK) {
             screen = SCREEN_WIFI_LIST; draw_wifi_list(fb, &wifi);
+        } else if (screen == SCREEN_WEB_KEYBOARD && action == ACTION_BACK) {
+            screen = SCREEN_MENU; draw_menu(fb, selected);
+        } else if (screen == SCREEN_WEB_KEYBOARD && action == ACTION_LEFT) {
+            web.cursor = keyboard_move(web.cursor, -1, 0); draw_web_keyboard(fb, &web);
+        } else if (screen == SCREEN_WEB_KEYBOARD && action == ACTION_RIGHT) {
+            web.cursor = keyboard_move(web.cursor, 1, 0); draw_web_keyboard(fb, &web);
+        } else if (screen == SCREEN_WEB_KEYBOARD && action == ACTION_UP) {
+            web.cursor = keyboard_move(web.cursor, 0, -1); draw_web_keyboard(fb, &web);
+        } else if (screen == SCREEN_WEB_KEYBOARD && action == ACTION_DOWN) {
+            web.cursor = keyboard_move(web.cursor, 0, 1); draw_web_keyboard(fb, &web);
+        } else if (screen == SCREEN_WEB_KEYBOARD && action == ACTION_SPACE) {
+            if (web.text_length < GUIDE_WEB_TEXT_MAX) {
+                web.text[web.text_length++] = ' '; web.text[web.text_length] = '\0';
+            }
+            draw_web_keyboard(fb, &web);
+        } else if (screen == SCREEN_WEB_KEYBOARD && action == ACTION_DELETE) {
+            if (web.text_length) web.text[--web.text_length] = '\0';
+            draw_web_keyboard(fb, &web);
+        } else if (screen == SCREEN_WEB_KEYBOARD && action == ACTION_OPEN) {
+            int result = web_keyboard_select(fb, &web);
+            if (result < 0) {
+                screen = SCREEN_MENU; draw_menu(fb, selected);
+            } else if (result > 0) {
+                char address[1024];
+                if (web_build_address(web.text, address, sizeof(address)) != 0) {
+                    snprintf(web.message, sizeof(web.message), "ADDRESS IS TOO LONG");
+                    draw_web_keyboard(fb, &web);
+                } else {
+                    draw_header(fb, "WEB BROWSER");
+                    draw_centered(fb, 180, "OPENING GUIDE WEB", 4,
+                                  color(fb, 245, 177, 52));
+                    draw_centered(fb, 270, "B RETURNS TO GUIDEOS", 2,
+                                  color(fb, 151, 220, 231));
+                    present(fb);
+                    if (web_browser_run(&inputs, log, address) != 0) {
+                        snprintf(web.message, sizeof(web.message),
+                                 "BROWSER CLOSED - SEE DIAGNOSTICS");
+                    }
+                    screen = SCREEN_MENU; draw_menu(fb, selected);
+                }
+            }
+        } else if (screen == SCREEN_WIKIPEDIA_HOME && action == ACTION_SPACE &&
+                   guide_wikipedia_installed() && guide_wifi_link_up()) {
+            snprintf(wiki.message, sizeof(wiki.message), "OPENING RICH READER");
+            draw_wikipedia_home(fb, &wiki);
+            if (wikipedia_rich_run(&inputs, log) == 0)
+                snprintf(wiki.message, sizeof(wiki.message), "RICH READER CLOSED SAFELY");
+            else
+                snprintf(wiki.message, sizeof(wiki.message), "RICH READER COULD NOT START");
+            draw_wikipedia_home(fb, &wiki);
+        } else if (screen == SCREEN_WIKIPEDIA_HOME && action == ACTION_SPACE &&
+                   guide_wikipedia_installed()) {
+            snprintf(wiki.message, sizeof(wiki.message), "CONNECT WIFI FIRST");
+            draw_wikipedia_home(fb, &wiki);
+        } else if (screen == SCREEN_SE_HOME && action == ACTION_OPEN &&
+                   guide_semiotic_installed()) {
+            wiki.message[0] = '\0';
+            screen = SCREEN_WIKIPEDIA_HOME;
+            draw_wikipedia_home(fb, &wiki);
         } else if (screen == SCREEN_WIKIPEDIA_HOME && action == ACTION_OPEN &&
                    guide_wikipedia_installed()) {
             if (!guide_wifi_link_up()) {
@@ -3408,6 +4187,41 @@ static void run_shell(struct framebuffer *fb, FILE *log)
             draw_wikipedia_article(fb, &wiki);
         } else if (screen == SCREEN_WIKIPEDIA_ARTICLE && action == ACTION_BACK) {
             screen = SCREEN_WIKIPEDIA_RESULTS; draw_wikipedia_results(fb, &wiki);
+        } else if (screen == SCREEN_WIKIPEDIA_ARTICLE && action == ACTION_SPACE) {
+            if (!guide_semiotic_installed()) {
+                semiotic_release_result();
+                snprintf(guide_se.message, sizeof(guide_se.message),
+                         "INSTALL ENGINE INTERFACE CARTRIDGE");
+                screen = SCREEN_SE_RESULT; draw_se_result(fb);
+            } else {
+                screen = SCREEN_SE_CONSENT;
+                draw_se_consent(fb, &wiki);
+            }
+        } else if (screen == SCREEN_SE_CONSENT && action == ACTION_BACK) {
+            screen = SCREEN_WIKIPEDIA_ARTICLE; draw_wikipedia_article(fb, &wiki);
+        } else if (screen == SCREEN_SE_CONSENT && action == ACTION_OPEN) {
+            semiotic_release_result();
+            if (semiotic_start(&wiki, log) == 0) {
+                screen = SCREEN_SE_WAIT; draw_se_wait(fb);
+            } else {
+                snprintf(guide_se.message, sizeof(guide_se.message),
+                         "COULD NOT START ENGINE REQUEST");
+                screen = SCREEN_SE_RESULT; draw_se_result(fb);
+            }
+        } else if (screen == SCREEN_SE_WAIT && action == ACTION_BACK) {
+            semiotic_cancel(log);
+            snprintf(guide_se.message, sizeof(guide_se.message), "REQUEST CANCELLED");
+            screen = SCREEN_WIKIPEDIA_ARTICLE; draw_wikipedia_article(fb, &wiki);
+        } else if (screen == SCREEN_SE_RESULT &&
+                   (action == ACTION_UP || action == ACTION_LEFT)) {
+            if (guide_se.page) --guide_se.page;
+            draw_se_result(fb);
+        } else if (screen == SCREEN_SE_RESULT &&
+                   (action == ACTION_DOWN || action == ACTION_RIGHT)) {
+            if (guide_se.page + 1 < guide_se.known_pages) ++guide_se.page;
+            draw_se_result(fb);
+        } else if (screen == SCREEN_SE_RESULT && action == ACTION_BACK) {
+            screen = SCREEN_WIKIPEDIA_ARTICLE; draw_wikipedia_article(fb, &wiki);
         } else if (screen == SCREEN_WIKIPEDIA_ARTICLE && action == ACTION_OPEN &&
                    wiki.link_count) {
             wiki.selected_link = wikipedia_first_link_on_page(&wiki);
@@ -3475,7 +4289,9 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                    catalog.state == GUIDE_CARTRIDGE_READY &&
                    (guide_wifi_install_supported(&catalog.items[catalog.selected]) ||
                     guide_developer_link_install_supported(&catalog.items[catalog.selected]) ||
-                    guide_wikipedia_install_supported(&catalog.items[catalog.selected]))) {
+                    guide_wikipedia_install_supported(&catalog.items[catalog.selected]) ||
+                    guide_semiotic_install_supported(&catalog.items[catalog.selected]) ||
+                    guide_emulation_install_supported(&catalog.items[catalog.selected]))) {
             screen = SCREEN_INSTALL_CONFIRM;
             draw_install_confirm(fb, &catalog.items[catalog.selected]);
         } else if (screen == SCREEN_INSTALL_CONFIRM && action == ACTION_BACK) {
@@ -3487,7 +4303,11 @@ static void run_shell(struct framebuffer *fb, FILE *log)
                           guide_developer_link_install_supported(&catalog.items[catalog.selected]) ?
                           "INSTALLING LINK" :
                           guide_wikipedia_install_supported(&catalog.items[catalog.selected]) ?
-                          "INSTALLING WIKIPEDIA" : "INSTALLING WIFI", 4,
+                          "INSTALLING WIKIPEDIA" :
+                          guide_semiotic_install_supported(&catalog.items[catalog.selected]) ?
+                          "INSTALLING ENGINE INTERFACE" :
+                          guide_emulation_install_supported(&catalog.items[catalog.selected]) ?
+                          "INSTALLING EMULATION" : "INSTALLING WIFI", 4,
                           color(fb, 244, 241, 228));
             draw_centered(fb, 272, "VERIFYING EVERY FILE", 3, color(fb, 245, 177, 52));
             draw_centered(fb, 332, "DO NOT POWER OFF", 2, color(fb, 151, 220, 231));
@@ -3498,6 +4318,12 @@ static void run_shell(struct framebuffer *fb, FILE *log)
             else if (guide_wikipedia_install_supported(&catalog.items[catalog.selected]))
                 install_success = guide_wikipedia_install(&catalog.items[catalog.selected], log,
                                                           install_message, sizeof(install_message)) == 0;
+            else if (guide_semiotic_install_supported(&catalog.items[catalog.selected]))
+                install_success = guide_semiotic_install(&catalog.items[catalog.selected], log,
+                                                         install_message, sizeof(install_message)) == 0;
+            else if (guide_emulation_install_supported(&catalog.items[catalog.selected]))
+                install_success = guide_emulation_install(&catalog.items[catalog.selected], log,
+                                                          install_message, sizeof(install_message)) == 0;
             else
                 install_success = guide_wifi_install(&catalog.items[catalog.selected], log,
                                                      install_message, sizeof(install_message)) == 0;
@@ -3507,7 +4333,8 @@ static void run_shell(struct framebuffer *fb, FILE *log)
             screen = SCREEN_CARTRIDGE_DETAIL;
             draw_cartridge_detail(fb, &catalog);
         } else if (action == ACTION_BACK) {
-            if (screen == SCREEN_CARTRIDGE_LIST || screen == SCREEN_DOOM_LIST)
+            if (screen == SCREEN_CARTRIDGE_LIST || screen == SCREEN_DOOM_LIST ||
+                screen == SCREEN_GAME_SYSTEMS)
                 guide_cartridge_release(&catalog, log);
             screen = SCREEN_MENU;
             draw_menu(fb, selected);
@@ -3522,10 +4349,17 @@ int main(void)
     struct timespec welcome_time = {3, 0};
     FILE *log, *marker;
     restore_clock_floor();
+    /* Set close-on-exec before any service helper can inherit the private
+     * supervisor channel. */
+    (void)supervisor_descriptor();
     (void)mount("proc", "/proc", "proc", 0, NULL);
     (void)mount("sysfs", "/sys", "sysfs", 0, NULL);
     marker = fopen("/hello-world-init-ran", "w");
-    if (marker) { fprintf(marker, "PID1_REACHED pid=%ld\nGUIDE_SHELL_STARTED=1\n", (long)getpid()); fclose(marker); }
+    if (marker) {
+        fprintf(marker, "GUIDE_SHELL_STARTED=1\nGUIDE_SHELL_PID=%ld\n",
+                (long)getpid());
+        fclose(marker);
+    }
     log = fopen("/guide-framebuffer-diagnostics.txt", "w");
     if (!log) log = stderr;
     fprintf(log, "GUIDEOS INTERACTIVE SHELL BOOT DIAGNOSTICS\n");
@@ -3535,7 +4369,6 @@ int main(void)
     fflush(log);
     guide_wifi_autoconnect();
     if (open_framebuffer(&fb, log) != 0) {
-        if (getpid() == 1) for (;;) sleep(3600);
         return 1;
     }
     draw_welcome(&fb, log); nanosleep(&welcome_time, NULL); run_shell(&fb, log);

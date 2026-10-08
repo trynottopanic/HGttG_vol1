@@ -11,11 +11,14 @@ import secrets
 import threading
 import time
 from dataclasses import dataclass
+from at_field import ATField, FieldMode
 
 from android_provider import AndroidProviderDetector
 from application_provider import ApplicationProvider
 from media_library import MediaLibrary, MediaRecord, default_config_path
 from media_preparer import DeckMediaPreparer
+from semiotic_provider import SemioticProvider
+from diagnostic_commands import DiagnosticCatalog
 
 
 PROTOCOL_VERSION = "guide-node/1"
@@ -58,23 +61,33 @@ class NodeState:
     """Memory-only identity, pairing codes, and Deck sessions for one Node run."""
 
     def __init__(self, name: str = "Guide Desktop Node",
-                 config_path: Path | None = None, auto_prepare: bool = False) -> None:
+                 config_path: Path | None = None, auto_prepare: bool = False,
+                 semiotic_enabled: bool | None = None,
+                 semiotic_provider: SemioticProvider | None = None) -> None:
         self.name = name.strip()[:64] or "Guide Desktop Node"
         self.config_path = config_path or default_config_path()
         self.node_id = secrets.token_hex(16)
         self.started_at = int(time.time())
         self._lock = threading.RLock()
         self._tokens: dict[str, tuple[str, float, str]] = {}
+        self._peer_addresses: dict[str, str] = {}
         self._failures: dict[str, int] = {}
         self._media_tickets: dict[str, tuple[str, float, str, int | None]] = {}
         self._trusted_decks: dict[str, dict[str, str]] = {}
         self._trust_armed = False
+        self._semiotic_enabled = False
+        # Offer introductions while the owner has selected Open.
+        self._at_field = ATField(FieldMode.OPEN)
         self._load_trust()
         self.android = AndroidProviderDetector()
         self.applications = ApplicationProvider(self.config_path)
         self.media = MediaLibrary(self.config_path)
         self.media_preparer = (DeckMediaPreparer(self.config_path.parent / "media-cache")
                                if auto_prepare else None)
+        if semiotic_enabled is not None:
+            self._semiotic_enabled = bool(semiotic_enabled)
+        self.semiotic = semiotic_provider or SemioticProvider(
+            enabled=self._semiotic_enabled)
         self.prepare_media()
         self.rotate_pairing_code()
 
@@ -124,8 +137,11 @@ class NodeState:
             return
         if not isinstance(value, dict):
             return
+        if "at_field" in value:
+            self._at_field = ATField.from_dict(value["at_field"])
         node_id = value.get("node_id")
         trusted = value.get("trusted_decks")
+        semiotic_enabled = value.get("semiotic_engine_enabled")
         if valid_identity(node_id):
             self.node_id = node_id
         if isinstance(trusted, dict):
@@ -138,6 +154,8 @@ class NodeState:
                         "name": record["name"][:64],
                         "secret_hash": record["secret_hash"],
                     }
+        if isinstance(semiotic_enabled, bool):
+            self._semiotic_enabled = semiotic_enabled
 
     def _save_trust(self) -> None:
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -148,9 +166,56 @@ class NodeState:
             value = {}
         value["node_id"] = self.node_id
         value["trusted_decks"] = self._trusted_decks
+        value["semiotic_engine_enabled"] = self._semiotic_enabled
+        value["at_field"] = self._at_field.to_dict()
         temporary = self.config_path.with_suffix(".new")
         temporary.write_text(json.dumps(value, indent=2), encoding="utf-8")
         os.replace(temporary, self.config_path)
+
+    def set_semiotic_enabled(self, enabled: bool) -> None:
+        """Persist the owner's decision to offer the optional local Engine."""
+        with self._lock:
+            self._semiotic_enabled = bool(enabled)
+            self.semiotic.enabled = self._semiotic_enabled
+            self._save_trust()
+
+    @property
+    def at_field(self) -> ATField:
+        with self._lock:
+            return self._at_field
+
+    def preview_at_field(self, mode: str) -> str:
+        with self._lock:
+            return self._at_field.with_mode(mode).preview(self.session_count())
+
+    def set_at_field(self, mode: str) -> None:
+        """Local owner setting. Apply to future connections; retain current work."""
+        with self._lock:
+            previous = self._at_field
+            self._at_field = previous.with_mode(mode)
+            try:
+                self._save_trust()
+            except OSError:
+                self._at_field = previous
+                raise
+
+    def set_at_field_exception(self, client_id: str, allowed: bool | None) -> None:
+        """Local settings API; None removes an exception. Does not grant trust."""
+        if not valid_identity(client_id) or (allowed is not None and type(allowed) is not bool):
+            raise ValueError("valid peer identity and connection choice required")
+        with self._lock:
+            previous = self._at_field
+            exceptions = dict(previous.exceptions)
+            if allowed is None:
+                exceptions.pop(client_id, None)
+            else:
+                exceptions[client_id] = allowed
+            self._at_field = ATField(previous.mode, tuple(exceptions.items()))
+            try:
+                self._save_trust()
+            except OSError:
+                self._at_field = previous
+                raise
 
     def rotate_pairing_code(self) -> str:
         with self._lock:
@@ -172,11 +237,18 @@ class NodeState:
                 self._failures[address] = failures + 1
                 return PairingResult(False, "pairing code rejected")
 
+            # A valid owner-shared code supplies acceptance for Familiar mode.
+            # Pairing's claimed identity is not yet a verified trusted peer;
+            # exceptions apply to credential-checked reconnections instead.
+            if self._at_field.connection(accepted=True) != "allow":
+                return PairingResult(False, "AT Field declines new incoming connections")
+
             token = secrets.token_urlsafe(32)
             expiry = now + SESSION_SECONDS
             label = str(client_name).strip()[:64] or "Unnamed Deck"
             identity = client_id if valid_identity(client_id) else ""
             self._tokens[token] = (label, expiry, identity)
+            self._peer_addresses[token] = address
             self._failures.pop(address, None)
             return PairingResult(True, "paired", token, int(expiry))
 
@@ -192,9 +264,10 @@ class NodeState:
     def trust_session(self, token: str) -> tuple[str, str] | None:
         with self._lock:
             record = self._tokens.get(token)
-            if not self._trust_armed or not record or record[1] <= time.time() or not record[2]:
+            if not record or record[1] <= time.time() or not record[2]:
                 return None
             secret = secrets.token_urlsafe(32)
+            previous = self._trusted_decks.get(record[2])
             self._trusted_decks[record[2]] = {
                 "name": record[0],
                 "secret_hash": hashlib.sha256(secret.encode("ascii")).hexdigest(),
@@ -202,24 +275,50 @@ class NodeState:
             try:
                 self._save_trust()
             except OSError:
-                self._trusted_decks.pop(record[2], None)
+                if previous is None:
+                    self._trusted_decks.pop(record[2], None)
+                else:
+                    self._trusted_decks[record[2]] = previous
                 return None
             self._trust_armed = False
             return record[2], secret
 
-    def reconnect(self, client_id: str, secret: str, client_name: str) -> PairingResult:
+    def reconnect(self, client_id: str, secret: str, client_name: str,
+                  address: str = "") -> PairingResult:
         now = time.time()
         with self._lock:
             record = self._trusted_decks.get(client_id)
             candidate = hashlib.sha256(str(secret).encode("ascii", "ignore")).hexdigest()
             if not record or not secrets.compare_digest(candidate, record["secret_hash"]):
                 return PairingResult(False, "trusted companion rejected")
+            if self._at_field.connection(client_id, known=True) != "allow":
+                return PairingResult(False, "AT Field declines reconnection")
             label = str(client_name).strip()[:64] or record["name"]
             record["name"] = label
             token = secrets.token_urlsafe(32)
             expiry = now + SESSION_SECONDS
             self._tokens[token] = (label, expiry, client_id)
+            self._peer_addresses[token] = address
             return PairingResult(True, "trusted companion", token, int(expiry))
+
+    def connected_decks(self) -> list[dict[str, object]]:
+        """Local UI metadata for live sessions; never expose bearer credentials."""
+        with self._lock:
+            self.session_count()
+            peers = {}
+            for token, (name, expiry, identity) in self._tokens.items():
+                key = identity or self._peer_addresses.get(token, name)
+                peers[key] = {"id": identity, "name": name,
+                              "address": self._peer_addresses.get(token, ""),
+                              "remembered": identity in self._trusted_decks,
+                              "expires_at": int(expiry)}
+            return sorted(peers.values(), key=lambda peer: str(peer["name"]).casefold())
+
+    def disconnect_deck(self, client_id: str, address: str = "") -> None:
+        with self._lock:
+            for token, record in list(self._tokens.items()):
+                if (client_id and record[2] == client_id) or (not client_id and self._peer_addresses.get(token) == address):
+                    self.unpair(token)
 
     def trusted_decks(self) -> list[tuple[str, str]]:
         with self._lock:
@@ -229,15 +328,21 @@ class NodeState:
 
     def revoke_trust(self, client_id: str) -> bool:
         with self._lock:
-            removed = self._trusted_decks.pop(client_id, None) is not None
+            previous = self._trusted_decks.pop(client_id, None)
+            removed = previous is not None
             if removed:
+                try:
+                    self._save_trust()
+                except OSError:
+                    self._trusted_decks[client_id] = previous
+                    raise
                 revoked_tokens = {token for token, record in self._tokens.items()
                                   if record[2] == client_id}
                 for token in revoked_tokens:
                     self._tokens.pop(token, None)
+                    self._peer_addresses.pop(token, None)
                 self._media_tickets = {ticket: value for ticket, value in self._media_tickets.items()
                                        if value[2] not in revoked_tokens}
-                self._save_trust()
             return removed
 
     def authenticate(self, token: str) -> bool:
@@ -248,12 +353,14 @@ class NodeState:
                 return False
             if record[1] <= now:
                 self._tokens.pop(token, None)
+                self._peer_addresses.pop(token, None)
                 return False
             return True
 
     def unpair(self, token: str) -> bool:
         with self._lock:
             removed = self._tokens.pop(token, None) is not None
+            self._peer_addresses.pop(token, None)
             self._media_tickets = {
                 ticket: value for ticket, value in self._media_tickets.items()
                 if value[2] != token
@@ -279,6 +386,7 @@ class NodeState:
     def revoke_all(self) -> None:
         with self._lock:
             self._tokens.clear()
+            self._peer_addresses.clear()
             self._media_tickets.clear()
 
     def issue_media_ticket(self, token: str, media_id: str,
@@ -318,6 +426,7 @@ class NodeState:
             expired = [token for token, value in self._tokens.items() if value[1] <= now]
             for token in expired:
                 self._tokens.pop(token, None)
+                self._peer_addresses.pop(token, None)
             return len(self._tokens)
 
     def public_description(self) -> dict[str, object]:
@@ -331,9 +440,11 @@ class NodeState:
 
     def capabilities(self) -> list[dict[str, object]]:
         android = self.android.status()
+        semiotic = self.semiotic.status()
         media_count = len(self.media_listing())
         return [
             {"id": "node.status", "available": True},
+            {"id": "semiotic.text", **semiotic},
             {"id": "media.library", "available": bool(self.media.folders),
              "items": media_count,
              "reason": "" if self.media.folders else "owner has not selected a media folder"},
@@ -345,3 +456,8 @@ class NodeState:
              "reason": "" if self.applications.profiles() else
                        "owner has not added an application"},
         ]
+
+
+    def diagnostic_capabilities(self) -> list[dict[str, object]]:
+        """Return only explicitly registered diagnostic operations."""
+        return self.diagnostics.list()

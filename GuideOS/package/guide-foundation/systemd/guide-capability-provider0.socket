@@ -1,0 +1,14 @@
+[Unit]
+Description=Guide trusted provider grant-validation socket
+
+[Socket]
+ListenSequentialPacket=/run/guideos/brokers/provider.sock
+SocketMode=0660
+SocketUser=guide-broker
+SocketGroup=guide-providers
+DirectoryMode=0750
+RemoveOnStop=yes
+Service=guide-capability-broker0.service
+
+[Install]
+WantedBy=sockets.target

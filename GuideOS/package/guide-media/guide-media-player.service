@@ -1,0 +1,47 @@
+[Unit]
+Description=Guide native Music and Video session owner
+Requires=guide-media-player.socket guide-storage.service guide-pipewire.service
+After=guide-media-player.socket guide-storage.service guide-audio.service
+Wants=guide-audio.service
+After=guide-shell.service
+[Service]
+User=guide-audio
+Group=audio
+SupplementaryGroups=video render tty
+Sockets=guide-media-player.socket
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+TTYPath=/dev/tty1
+TTYReset=no
+TTYVHangup=no
+ExecStart=/usr/bin/python3 /usr/lib/guideos/media/media_player_service.py
+RuntimeDirectory=guideos-player/decoder
+RuntimeDirectoryMode=0700
+StateDirectory=guideos-player
+StateDirectoryMode=0700
+CacheDirectory=guideos-player
+CacheDirectoryMode=0700
+Environment=XDG_CACHE_HOME=/var/cache/guideos-player
+Environment=MESA_SHADER_CACHE_MAX_SIZE=32M
+Environment=XDG_RUNTIME_DIR=/run/guide-audio
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/guide-audio/bus
+Environment=PYTHONDONTWRITEBYTECODE=1
+Restart=on-failure
+RestartSec=2
+KillMode=control-group
+TimeoutStopSec=4
+MemoryHigh=320M
+MemoryMax=384M
+LimitRTPRIO=20
+LimitRTTIME=200ms
+LimitMEMLOCK=16M
+TasksMax=64
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX
+ReadWritePaths=/run/guideos-player/decoder /var/lib/guideos-player /run/guideos-audio
+[Install]
+WantedBy=multi-user.target

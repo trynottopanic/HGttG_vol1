@@ -11,6 +11,7 @@ GUIDE_HELLO_FB_LICENSE_FILES = assets/DejaVu-Fonts-LICENSE.txt
 
 define GUIDE_HELLO_FB_BUILD_CMDS
 	$(TARGET_CC) $(TARGET_CFLAGS) -static -Wall -Wextra -Werror \
+		-I$(BR2_EXTERNAL_GUIDE_OS_PATH)/package/guide-supervisor/src \
 		-o $(@D)/guide-hello-fb $(@D)/guide-hello-fb.c \
 		$(@D)/cartridge.c $(@D)/installer.c $(@D)/wifi.c
 endef
